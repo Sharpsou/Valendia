@@ -14,12 +14,13 @@
 1. Generate deterministically from a seed.
 2. Build terrain in square mesh chunks so the scene can scale without one giant mesh.
 3. Use layered Perlin noise for rolling hills and a radial ridge mask for distant mountains.
-4. Flatten and clear a sinusoidal path through the valley.
-5. Assign visible terrain materials from deterministic biome masks.
-6. Scatter faceted rocks, stylized trees, dense grass clumps, lavender flowers, and scrub from seeded random streams.
-7. Use double-sided foliage materials, outward-oriented blob normals, and flatter leaf cushion meshes so trees stay solid when viewed from underneath.
-8. Add procedural sky ambience, low-poly clouds, and far limestone spires.
-9. Once the composition feels right, keep the seed and scene object, or convert generated children to static scene content.
+4. Add a bounded micro-relief pass for ground texture, masked near the path and softened near the horizon ridges.
+5. Flatten and clear a sinusoidal path through the valley.
+6. Assign visible terrain materials from deterministic biome masks and procedural detail/normal textures.
+7. Scatter faceted rocks, stylized trees, dense grass clumps, lavender flowers, and scrub from seeded random streams.
+8. Use double-sided foliage materials, outward-oriented blob normals, and flatter leaf cushion meshes so trees stay solid when viewed from underneath.
+9. Add procedural sky ambience, low-poly clouds, and far limestone spires.
+10. Once the composition feels right, keep the seed and scene object, or convert generated children to static scene content.
 
 ## First Prototype Setup
 
@@ -50,6 +51,8 @@ Manual path:
 - `chunksPerAxis`: 4 for prototype, 6-8 after performance profiling.
 - `chunkSize`: 180-220.
 - `verticesPerChunk`: 48 for medium-poly terrain, 64 if silhouettes need more detail.
+- `terrainMicroReliefStrength`: 0.12 for a safe ground-detail pass; keep below 0.25 unless the terrain is visually rechecked.
+- `groundTextureTiling`: 42 so the generated 128x128 ground detail repeats at meadow scale rather than across the full valley.
 - `treeCount`: 920 in the current DA validation scene, 350-650 depending on target hardware before forest batching.
 - `forestPocketCount`: 12 in the current DA validation scene to create additional forest masses away from the path.
 - `grassTuftCount`: 90000 in the current DA validation scene with shorter tufts; use 4000-8000 for lighter editor iteration until instancing/batching is added.
@@ -62,7 +65,7 @@ The current generator is intentionally editor-friendly and deterministic. The pr
 
 - persistent asset baking for generated meshes/materials,
 - GPU instancing or indirect rendering for vegetation if the batched meshes are still too heavy,
-- quality tuning after a real Play Mode pass with the user camera,
+- quality tuning after a real Play Mode pass with the user camera, especially checking whether the new ground normal/detail texture adds enough matter without noisy shimmer,
 - smoother biome transitions and authored points of interest along the path,
 - occlusion/LOD groups before increasing scene size.
 

@@ -63,6 +63,8 @@ Fonctions presentes :
 - generation de terrain en chunks ;
 - mesh terrain medium-poly ;
 - relief par bruit Perlin multi-octaves ;
+- micro-relief de sol tres faible, masque sur le chemin et calme en bord de carte pour eviter les vallons parasites ;
+- textures/normal maps procedurales legeres appliquees aux materiaux de sol pour casser l'effet trop lisse sans ajouter de GameObjects ;
 - montagnes renforcees en peripherie ;
 - chemin sinueux aplani ;
 - sous-mesh distinct pour sol et chemin ;
@@ -149,6 +151,7 @@ Derniere passe visuelle :
 - suppression des anciens placages couleur `Painterly Meadow Patch` : remplaces par des lots spatiaux `Organic Meadow Grass Batches` composes de strokes/brins verticaux, plus organiques et plus compatibles performance ;
 - arbres ajustes vers `img_DA/img2.jpg` : moins de coniferes parasites, rochers plus bas, canopees moins en parasol avec moins de galette basse et plus de volume dans les lobes superieurs ;
 - correction proportion arbres : feuillage broadleaf abaisse autour du sommet du tronc, tronc legerement raccourci, branches remontees pour entrer dans la masse de feuilles au lieu de rester visibles sous une canopee trop haute ;
+- passe sol prudente : ajout d'un micro-relief de 12 cm max environ, attenue sur le chemin, plus texture organique et normal map 128x128 tuilees sur les materiaux de terrain sans toucher au ruban de chemin ;
 - preview regeneree apres chaque passe couleur, derniere image de controle dans `Assets/Valendia/Docs/ValendiaPrototypePreview.png`.
 
 Passe performance :
@@ -182,6 +185,7 @@ Cette decision evite de versionner une scene procedurale d'environ 460 Mo et gar
 - La derniere passe DA assume une densite tres elevee pour valider l'intention visuelle ; la scene est encore lourde avec 90000 touffes batchees, et il faudra reduire ou instancier l'herbe si le Play Mode sature.
 - Les meshes facettes maison ameliorent le rendu, mais une vraie phase LOD/instancing reste necessaire avant d'augmenter encore la densite.
 - Les materiaux generes en runtime ne sont pas encore des assets persistants.
+- Les textures de sol sont generees en memoire par le generateur ; si elles conviennent visuellement, elles pourront etre bakees plus tard en assets partages.
 - La scene prototype est creee automatiquement, mais elle contient encore beaucoup d'objets separes.
 - Les performances n'ont pas encore ete mesurees en Play Mode.
 - La direction artistique progresse, mais reste trop procedurale/brute par rapport aux references : il faudra une passe asset/shape plus authoring pour les arbres, nuages et montagnes.

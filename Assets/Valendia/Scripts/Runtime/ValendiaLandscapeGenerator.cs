@@ -18,6 +18,13 @@ namespace Valendia.Runtime
         [SerializeField, Range(0.2f, 0.8f)] private float persistence = 0.48f;
         [SerializeField, Range(1.5f, 3.5f)] private float lacunarity = 2.1f;
 
+        [Header("Ground Detail")]
+        [SerializeField, Range(0f, 0.6f)] private float terrainMicroReliefStrength = 0.12f;
+        [SerializeField, Min(4f)] private float terrainMicroReliefScale = 12f;
+        [SerializeField, Range(0f, 1f)] private float groundTextureStrength = 0.28f;
+        [SerializeField, Range(4f, 64f)] private float groundTextureTiling = 42f;
+        [SerializeField, Range(0f, 2f)] private float groundNormalStrength = 0.18f;
+
         [Header("Composition")]
         [SerializeField, Min(2f)] private float pathWidth = 12f;
         [SerializeField, Min(0f)] private float pathVegetationClearance = 8f;
@@ -70,12 +77,15 @@ namespace Valendia.Runtime
         private const int MaxGrassTuftVertices = 160;
         private const int MaxMeadowBatchVertices = 60000;
         private const int MaxMeadowPatchVertices = 720;
+        private const int GroundDetailTextureSize = 128;
 
         private Transform generatedRoot;
         private Transform meadowBatchRoot;
         private MeadowBatchState greenMeadowBatch;
         private MeadowBatchState goldenMeadowBatch;
         private MeadowBatchState lavenderMeadowBatch;
+        private Texture2D groundDetailTexture;
+        private Texture2D groundNormalTexture;
 
         private sealed class MeadowBatchState
         {
@@ -215,10 +225,11 @@ namespace Valendia.Runtime
                             float worldX = originX + x / (float)quads * chunkSize;
                             float worldZ = originZ + z / (float)quads * chunkSize;
                             float height = HeightAt(worldX, worldZ);
+                            Biome biome = BiomeAt(worldX, worldZ);
 
                             vertices[index] = new Vector3(worldX, height, worldZ);
                             uv[index] = new Vector2(worldX / WorldSize, worldZ / WorldSize);
-                            colors[index] = IsOnPath(worldX, worldZ, pathWidth * 0.5f) ? new Color(0.61f, 0.53f, 0.36f) : BiomeGroundColor(BiomeAt(worldX, worldZ));
+                            colors[index] = GroundVertexColorAt(worldX, worldZ, biome);
                         }
                     }
 
@@ -252,6 +263,7 @@ namespace Valendia.Runtime
 
                     mesh.SetTriangles(pathTriangles, biomeTriangles.Length);
                     mesh.RecalculateNormals();
+                    mesh.RecalculateTangents();
                     mesh.RecalculateBounds();
 
                     GameObject chunk = new GameObject($"Terrain Chunk {cx}-{cz}");
@@ -812,8 +824,9 @@ namespace Valendia.Runtime
             float pathBlend = 1f - Mathf.SmoothStep(pathWidth * 0.5f, pathWidth * 1.8f, pathDistance);
             float baseHeight = rolling + mountains;
             float pathHeight = rolling * 0.96f + mountains * 0.62f;
+            float height = Mathf.Lerp(baseHeight, pathHeight, pathBlend * 0.36f);
 
-            return Mathf.Lerp(baseHeight, pathHeight, pathBlend * 0.36f);
+            return height + GroundMicroReliefAt(x, z, pathDistance);
         }
 
         private float SlopeAt(float x, float z)
@@ -822,6 +835,25 @@ namespace Valendia.Runtime
             float dx = Mathf.Abs(HeightAt(x + step, z) - HeightAt(x - step, z));
             float dz = Mathf.Abs(HeightAt(x, z + step) - HeightAt(x, z - step));
             return Mathf.Atan(Mathf.Max(dx, dz) / (step * 2f)) * Mathf.Rad2Deg;
+        }
+
+        private float GroundMicroReliefAt(float x, float z, float pathDistance)
+        {
+            if (terrainMicroReliefStrength <= 0f)
+            {
+                return 0f;
+            }
+
+            float pathMask = Mathf.SmoothStep(pathWidth * 0.85f, pathWidth * 2.15f, pathDistance);
+            float radial = new Vector2(x, z).magnitude / (WorldSize * 0.5f);
+            float ridgeCalm = Mathf.Lerp(1f, 0.45f, Mathf.SmoothStep(0.68f, 0.96f, radial));
+            float scale = Mathf.Max(4f, terrainMicroReliefScale);
+            float broad = Mathf.PerlinNoise((x + seed * 0.31f) / scale, (z - seed * 0.19f) / scale);
+            float fine = Mathf.PerlinNoise((x - seed * 0.43f) / (scale * 0.48f), (z + seed * 0.27f) / (scale * 0.48f));
+            float broken = Mathf.PerlinNoise((x + seed * 0.07f) / (scale * 1.9f), (z + seed * 0.11f) / (scale * 1.9f));
+            float detail = (broad * 0.55f + fine * 0.30f + broken * 0.15f - 0.5f) * 2f;
+
+            return detail * terrainMicroReliefStrength * pathMask * ridgeCalm;
         }
 
         private float PathCenterX(float z)
@@ -872,6 +904,25 @@ namespace Valendia.Runtime
                 default:
                     return new Color(0.30f, 0.56f, 0.38f);
             }
+        }
+
+        private Color GroundVertexColorAt(float x, float z, Biome biome)
+        {
+            Color baseColor = IsOnPath(x, z, pathWidth * 0.5f)
+                ? new Color(0.61f, 0.53f, 0.36f)
+                : BiomeGroundColor(biome);
+
+            float moss = Mathf.PerlinNoise((x + seed * 0.61f) * 0.038f, (z - seed * 0.52f) * 0.038f);
+            float soil = Mathf.PerlinNoise((x - seed * 0.21f) * 0.092f, (z + seed * 0.73f) * 0.092f);
+            float shade = Mathf.Lerp(0.88f, 1.06f, moss * 0.72f + soil * 0.28f);
+            Color olive = new Color(0.34f, 0.43f, 0.26f);
+            Color warmed = Color.Lerp(baseColor, olive, Mathf.Clamp01((1f - moss) * 0.18f));
+
+            return new Color(
+                Mathf.Clamp01(warmed.r * shade),
+                Mathf.Clamp01(warmed.g * shade),
+                Mathf.Clamp01(warmed.b * shade),
+                1f);
         }
 
         private Vector3 RandomPoint(System.Random random)
@@ -1827,12 +1878,144 @@ namespace Valendia.Runtime
             if (rockMaterial == null) rockMaterial = CreateMaterial("Valendia Warm Limestone", new Color(0.72f, 0.62f, 0.44f), 0.38f);
             if (cloudMaterial == null) cloudMaterial = CreateUnlitMaterial("Valendia Soft Cloud", new Color(0.90f, 0.86f, 0.72f));
 
+            EnsureGroundDetailTextures();
+            ConfigureGroundDetailMaterial(groundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength);
+            ConfigureGroundDetailMaterial(autumnGroundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength);
+            ConfigureGroundDetailMaterial(goldenGrassGroundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength);
+            ConfigureGroundDetailMaterial(lavenderGroundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength);
+            ConfigureGroundDetailMaterial(scrubGroundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling * 0.85f, groundNormalStrength * 0.75f);
+
             ConfigureDoubleSidedMaterial(leafMaterial);
             ConfigureDoubleSidedMaterial(autumnLeafMaterial);
             ConfigureDoubleSidedMaterial(warmLeafMaterial);
             ConfigureDoubleSidedMaterial(darkLeafMaterial);
             ConfigureDoubleSidedMaterial(grassMaterial);
             ConfigureDoubleSidedMaterial(flowerMaterial);
+        }
+
+        private void EnsureGroundDetailTextures()
+        {
+            if (groundDetailTexture == null)
+            {
+                groundDetailTexture = CreateGroundDetailTexture(
+                    "Valendia Organic Ground Detail",
+                    new Color(0.86f, 0.92f, 0.78f),
+                    new Color(1f, 1f, 0.93f),
+                    0f);
+            }
+
+            if (groundNormalTexture == null)
+            {
+                groundNormalTexture = CreateGroundNormalTexture("Valendia Organic Ground Normal", 0f, 1.45f);
+            }
+        }
+
+        private Texture2D CreateGroundDetailTexture(string textureName, Color shadowTint, Color lightTint, float offset)
+        {
+            Texture2D texture = new Texture2D(GroundDetailTextureSize, GroundDetailTextureSize, TextureFormat.RGBA32, true)
+            {
+                name = textureName,
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear
+            };
+
+            for (int y = 0; y < GroundDetailTextureSize; y++)
+            {
+                for (int x = 0; x < GroundDetailTextureSize; x++)
+                {
+                    float u = x / (float)GroundDetailTextureSize;
+                    float v = y / (float)GroundDetailTextureSize;
+                    float detail = GroundDetailTextureNoise(u, v, offset);
+                    float fleck = Mathf.PerlinNoise(u * 57.3f + seed * 0.002f + offset, v * 61.1f - seed * 0.003f);
+                    float mixed = Mathf.Clamp01(0.5f + (detail - 0.5f) * groundTextureStrength + (fleck - 0.5f) * groundTextureStrength * 0.24f);
+                    Color color = Color.Lerp(shadowTint, lightTint, mixed);
+                    color.a = 1f;
+                    texture.SetPixel(x, y, color);
+                }
+            }
+
+            texture.Apply(true, true);
+            return texture;
+        }
+
+        private Texture2D CreateGroundNormalTexture(string textureName, float offset, float normalContrast)
+        {
+            Texture2D texture = new Texture2D(GroundDetailTextureSize, GroundDetailTextureSize, TextureFormat.RGBA32, true, true)
+            {
+                name = textureName,
+                wrapMode = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear
+            };
+
+            float step = 1f / GroundDetailTextureSize;
+            for (int y = 0; y < GroundDetailTextureSize; y++)
+            {
+                for (int x = 0; x < GroundDetailTextureSize; x++)
+                {
+                    float u = x / (float)GroundDetailTextureSize;
+                    float v = y / (float)GroundDetailTextureSize;
+                    float left = GroundDetailTextureNoise(Wrap01(u - step), v, offset);
+                    float right = GroundDetailTextureNoise(Wrap01(u + step), v, offset);
+                    float down = GroundDetailTextureNoise(u, Wrap01(v - step), offset);
+                    float up = GroundDetailTextureNoise(u, Wrap01(v + step), offset);
+                    Vector3 normal = new Vector3((left - right) * normalContrast, (down - up) * normalContrast, 1f).normalized;
+                    float encodedX = normal.x * 0.5f + 0.5f;
+                    float encodedY = normal.y * 0.5f + 0.5f;
+                    float encodedZ = normal.z * 0.5f + 0.5f;
+
+                    texture.SetPixel(x, y, new Color(encodedX, encodedY, encodedZ, encodedX));
+                }
+            }
+
+            texture.Apply(true, true);
+            return texture;
+        }
+
+        private float GroundDetailTextureNoise(float u, float v, float offset)
+        {
+            float seedOffset = seed * 0.00037f + offset;
+            float broad = Mathf.PerlinNoise(u * 3.7f + seedOffset, v * 3.1f - seedOffset);
+            float mid = Mathf.PerlinNoise(u * 11.9f - seedOffset * 0.7f, v * 9.4f + seedOffset * 0.9f);
+            float grain = Mathf.PerlinNoise(u * 29.5f + seedOffset * 1.3f, v * 33.2f - seedOffset * 1.1f);
+            return Mathf.Clamp01(broad * 0.26f + mid * 0.34f + grain * 0.40f);
+        }
+
+        private static float Wrap01(float value)
+        {
+            value %= 1f;
+            return value < 0f ? value + 1f : value;
+        }
+
+        private static void ConfigureGroundDetailMaterial(Material material, Texture2D albedo, Texture2D normal, float tiling, float normalStrength)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            Vector2 scale = Vector2.one * Mathf.Max(1f, tiling);
+            if (albedo != null)
+            {
+                if (material.HasProperty("_BaseMap"))
+                {
+                    material.SetTexture("_BaseMap", albedo);
+                    material.SetTextureScale("_BaseMap", scale);
+                }
+
+                if (material.HasProperty("_MainTex"))
+                {
+                    material.SetTexture("_MainTex", albedo);
+                    material.SetTextureScale("_MainTex", scale);
+                }
+            }
+
+            if (normal != null && normalStrength > 0f && material.HasProperty("_BumpMap"))
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.SetTextureScale("_BumpMap", scale);
+                if (material.HasProperty("_BumpScale")) material.SetFloat("_BumpScale", normalStrength);
+                material.EnableKeyword("_NORMALMAP");
+            }
         }
 
         private void ApplyAtmosphere()
