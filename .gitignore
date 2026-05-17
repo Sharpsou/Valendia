@@ -1,0 +1,38 @@
+Library/
+Logs/
+Temp/
+Obj/
+Build/
+Builds/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Local agent tooling
+.agents/
+skills-lock.json
+
+# Generated Valendia prototype artifacts
+# Recreate from Unity with Valendia > Create Prototype Scene / Create Prototype Preview.
+Assets/Valendia/ValendiaPrototype.unity
+Assets/Valendia/ValendiaPrototype.unity.meta
+Assets/Valendia/Docs/ValendiaPrototypePreview.png
+Assets/Valendia/Docs/ValendiaPrototypePreview.png.meta
+
+# Unity generated files
+*.csproj
+*.sln
+*.user
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+.vs/
+.vscode/
