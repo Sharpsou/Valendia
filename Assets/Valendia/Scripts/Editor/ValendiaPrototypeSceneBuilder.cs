@@ -216,6 +216,7 @@ namespace Valendia.Editor
             character.center = new Vector3(0f, 0.9f, 0f);
 
             ValendiaFirstPersonController controller = player.AddComponent<ValendiaFirstPersonController>();
+            player.AddComponent<ValendiaFpsDisplay>();
 
             GameObject cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
