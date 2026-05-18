@@ -52,6 +52,7 @@ namespace Valendia.Runtime
         [SerializeField, Min(0)] private int distantSpireCount = 64;
 
         [Header("Runtime")]
+        [SerializeField] private GenerationQualityProfile qualityProfile = GenerationQualityProfile.PlayableOptimized;
         [SerializeField] private bool generateOnStart = true;
         [SerializeField] private Material skyboxMaterial;
         [SerializeField] private Material groundMaterial;
@@ -85,7 +86,10 @@ namespace Valendia.Runtime
         private const int MaxMeadowBatchVertices = 60000;
         private const int MaxMeadowPatchVertices = 720;
         private const int GroundDetailTextureSize = 128;
-        private const int MaxCombinedRendererVertices = 240000;
+        private const int MaxCombinedRendererVertices = 900000;
+        private const float FullGrassDetailPathDistance = 72f;
+        private const float ReducedGrassDetailPathDistance = 210f;
+        private const float DetailColliderPathDistance = 180f;
 
         private Transform generatedRoot;
         private Transform meadowBatchRoot;
@@ -166,6 +170,10 @@ namespace Valendia.Runtime
 
         private float WorldSize => chunksPerAxis * chunkSize;
         private Vector2 WorldMin => new Vector2(-WorldSize * 0.5f, -WorldSize * 0.5f);
+        private bool IsPlayableOptimized => qualityProfile == GenerationQualityProfile.PlayableOptimized;
+        private int EffectiveGrassTuftCount => IsPlayableOptimized ? Mathf.RoundToInt(grassTuftCount * 0.86f) : grassTuftCount;
+        private int EffectiveMeadowPatchCount => IsPlayableOptimized ? Mathf.RoundToInt(meadowPatchCount * 0.88f) : meadowPatchCount;
+        private int EffectiveFlowerPatchCount => IsPlayableOptimized ? Mathf.RoundToInt(flowerPatchCount * 0.82f) : flowerPatchCount;
 
         private void Start()
         {
@@ -739,10 +747,11 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Organic Meadow Stroke Seeds");
             System.Random random = new System.Random(seed + 909);
+            int targetCount = EffectiveMeadowPatchCount;
             int placed = 0;
-            int attempts = meadowPatchCount * 5;
+            int attempts = targetCount * 5;
 
-            for (int i = 0; i < attempts && placed < meadowPatchCount; i++)
+            for (int i = 0; i < attempts && placed < targetCount; i++)
             {
                 Vector3 point = RandomPoint(random);
                 if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.2f))
@@ -774,7 +783,8 @@ namespace Valendia.Runtime
             List<int>[] batchTriangles = new List<int>[GrassPaletteVariants];
             int[] batchIndexes = new int[GrassPaletteVariants];
 
-            for (int i = 0; i < grassTuftCount; i++)
+            int targetCount = EffectiveGrassTuftCount;
+            for (int i = 0; i < targetCount; i++)
             {
                 Vector3 point = RandomPoint(random);
                 if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.5f))
@@ -824,10 +834,11 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Flower Patches");
             System.Random random = new System.Random(seed + 404);
+            int targetCount = EffectiveFlowerPatchCount;
             int placed = 0;
-            int attempts = flowerPatchCount * 7;
+            int attempts = targetCount * 7;
 
-            for (int i = 0; i < attempts && placed < flowerPatchCount; i++)
+            for (int i = 0; i < attempts && placed < targetCount; i++)
             {
                 Vector3 point = RandomPoint(random);
                 if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 2.5f))
@@ -1192,6 +1203,16 @@ namespace Valendia.Runtime
             return Mathf.Abs(x - PathCenterX(z)) <= radius;
         }
 
+        private bool ShouldUseDetailCollider(Vector3 position)
+        {
+            if (!IsPlayableOptimized)
+            {
+                return true;
+            }
+
+            return Mathf.Abs(position.x - PathCenterX(position.z)) <= DetailColliderPathDistance;
+        }
+
         private Biome BiomeAt(float x, float z)
         {
             float radial = new Vector2(x, z).magnitude / (WorldSize * 0.5f);
@@ -1304,7 +1325,10 @@ namespace Valendia.Runtime
                 Mathf.Lerp(-2f, 2f, (float)random.NextDouble()),
                 0f,
                 Mathf.Lerp(-3f, 3f, (float)random.NextDouble()));
-            AddTreeTrunkCollider(tree, trunkHeight);
+            if (ShouldUseDetailCollider(position))
+            {
+                AddTreeTrunkCollider(tree, trunkHeight);
+            }
 
             Material crownMaterial = LeafMaterialForBiome(biome, random);
             float coniferChance = coniferChanceOverride >= 0f
@@ -1364,7 +1388,7 @@ namespace Valendia.Runtime
                 FlushMeadowBatchChunk(batch, chunk);
             }
 
-            AddOrganicMeadowPatchGeometry(batch.Vertices[chunk], batch.Triangles[chunk], center, biome, random, sizeMultiplier);
+            AddOrganicMeadowPatchGeometry(batch.Vertices[chunk], batch.Triangles[chunk], center, biome, random, sizeMultiplier, GrassDetailAt(center));
         }
 
         private MeadowBatchState MeadowBatchForBiome(Biome biome, System.Random random)
@@ -1439,13 +1463,14 @@ namespace Valendia.Runtime
             Vector3 center,
             Biome biome,
             System.Random random,
-            float sizeMultiplier)
+            float sizeMultiplier,
+            float detail)
         {
             float radiusX = Mathf.Lerp(1.7f, 5.4f, (float)random.NextDouble()) * sizeMultiplier;
             float radiusZ = Mathf.Lerp(0.55f, 1.8f, (float)random.NextDouble()) * sizeMultiplier;
             float rotation = Mathf.Lerp(0f, Mathf.PI * 2f, (float)random.NextDouble());
             float biomeDensity = biome == Biome.LavenderField ? 1.05f : biome == Biome.GoldenGrass ? 0.72f : 0.86f;
-            int clumps = Mathf.RoundToInt(Mathf.Lerp(7f, 16f, (float)random.NextDouble()) * Mathf.Clamp(sizeMultiplier, 0.75f, 1.9f) * biomeDensity);
+            int clumps = Mathf.RoundToInt(Mathf.Lerp(7f, 16f, (float)random.NextDouble()) * Mathf.Clamp(sizeMultiplier, 0.75f, 1.9f) * biomeDensity * Mathf.Lerp(0.58f, 1f, detail));
 
             for (int clump = 0; clump < clumps; clump++)
             {
@@ -1460,6 +1485,7 @@ namespace Valendia.Runtime
                 Vector3 clumpCenter = new Vector3(worldX, worldY, worldZ);
 
                 int blades = biome == Biome.LavenderField ? random.Next(3, 6) : random.Next(4, 7);
+                blades = Mathf.Max(2, Mathf.RoundToInt(blades * Mathf.Lerp(0.62f, 1f, detail)));
                 for (int blade = 0; blade < blades; blade++)
                 {
                     float bladeAngle = rotation + angle + Mathf.Lerp(-0.9f, 0.9f, (float)random.NextDouble());
@@ -1565,7 +1591,7 @@ namespace Valendia.Runtime
                 FlushGrassBatch(parent, vertices, triangles, ref batchIndex, objectPrefix, material);
             }
 
-            AddGrassTuftGeometry(vertices, triangles, position, random);
+            AddGrassTuftGeometry(vertices, triangles, position, random, GrassDetailAt(position));
         }
 
         private void FlushGrassBatch(
@@ -1667,7 +1693,10 @@ namespace Valendia.Runtime
                 Mathf.Lerp(0.24f, 0.72f, (float)random.NextDouble()),
                 Mathf.Lerp(0.9f, 2.5f, (float)random.NextDouble()));
             rock.isStatic = true;
-            AddApproximateBoxCollider(rock, new Vector3(0f, 0.02f, 0f), new Vector3(1.35f, 1.15f, 1.35f));
+            if (ShouldUseDetailCollider(position))
+            {
+                AddApproximateBoxCollider(rock, new Vector3(0f, 0.02f, 0f), new Vector3(1.35f, 1.15f, 1.35f));
+            }
         }
 
         private void CreateBroadCanopy(Transform tree, Material crownMaterial, float trunkHeight, System.Random random)
@@ -1929,9 +1958,7 @@ namespace Valendia.Runtime
             }
 
             string name = gameObject.name;
-            return !name.Contains("Grass Batch")
-                && !name.Contains("Meadow Stroke Batch")
-                && !name.Contains("Smooth Dust Path")
+            return !name.Contains("Smooth Dust Path")
                 && !name.StartsWith("Terrain Chunk", StringComparison.Ordinal);
         }
 
@@ -2361,9 +2388,23 @@ namespace Valendia.Runtime
             AddSingleTriangle(vertices, triangles, p0, p1, p2);
         }
 
-        private static void AddGrassTuftGeometry(List<Vector3> vertices, List<int> triangles, Vector3 position, System.Random random)
+        private float GrassDetailAt(Vector3 position)
         {
-            int blades = random.Next(7, 13);
+            if (!IsPlayableOptimized)
+            {
+                return 1f;
+            }
+
+            float pathDistance = Mathf.Abs(position.x - PathCenterX(position.z));
+            float distanceFade = 1f - Mathf.SmoothStep(FullGrassDetailPathDistance, ReducedGrassDetailPathDistance, pathDistance);
+            float radial = new Vector2(position.x, position.z).magnitude / Mathf.Max(1f, WorldSize * 0.5f);
+            float borderBoost = Mathf.SmoothStep(0.78f, 0.98f, radial) * 0.14f;
+            return Mathf.Clamp(Mathf.Lerp(0.44f, 1f, distanceFade) + borderBoost, 0.44f, 1f);
+        }
+
+        private static void AddGrassTuftGeometry(List<Vector3> vertices, List<int> triangles, Vector3 position, System.Random random, float detail)
+        {
+            int blades = Mathf.Max(4, Mathf.RoundToInt(random.Next(7, 13) * Mathf.Clamp01(detail)));
             float yaw = Mathf.Lerp(0f, Mathf.PI * 2f, (float)random.NextDouble());
 
             for (int i = 0; i < blades; i++)
@@ -2373,7 +2414,7 @@ namespace Valendia.Runtime
                 Vector3 localBase = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
                 Vector3 basePoint = position + RotateYaw(localBase, yaw);
                 float bladeAngle = yaw + angle + Mathf.Lerp(-0.55f, 0.55f, (float)random.NextDouble());
-                float height = Mathf.Lerp(0.16f, 0.50f, (float)random.NextDouble());
+                float height = Mathf.Lerp(0.15f, 0.50f, (float)random.NextDouble()) * Mathf.Lerp(0.88f, 1f, detail);
                 float width = Mathf.Lerp(0.03f, 0.085f, (float)random.NextDouble());
                 AddGrassBlade(vertices, triangles, basePoint, bladeAngle, height, width, Mathf.Lerp(0.025f, 0.10f, (float)random.NextDouble()));
             }
@@ -2718,6 +2759,12 @@ namespace Valendia.Runtime
             GoldenGrass,
             LavenderField,
             MountainScrub
+        }
+
+        private enum GenerationQualityProfile
+        {
+            HighVisual,
+            PlayableOptimized
         }
     }
 }

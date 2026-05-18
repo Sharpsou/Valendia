@@ -157,11 +157,15 @@ Derniere passe visuelle :
 
 Passe performance :
 
+- le generateur expose deux profils : `HighVisual` pour la densite complete et `PlayableOptimized` par defaut pour une scene plus jouable ;
 - l'herbe principale n'est plus generee en dizaines de milliers de GameObjects individuels ;
 - les touffes d'herbe sont maintenant regroupees en lots spatiaux par palette (`Fresh/Olive/Golden/Rose Grass Batch`) pour reduire la charge CPU, les draw calls et la taille scene ;
 - l'herbe des bords de chemin est aussi batchee (`Path Edge Grass Batch`) ;
+- en `PlayableOptimized`, les herbes et strokes de prairie loin du chemin gardent une presence visuelle mais utilisent moins de brins, sans masquage complet ;
 - les brins d'herbe ne projettent plus d'ombres individuelles, mais recoivent toujours les ombres des arbres/relief ;
-- les objets statiques decoratifs sont bakes par materiau et mode d'ombre apres generation, tout en conservant les colliders de troncs, rochers et montagnes ;
+- les lots d'herbe, les strokes de prairie et les objets statiques decoratifs sont bakes par materiau et mode d'ombre apres generation ;
+- les colliders de troncs et rochers tres loin du chemin sont omis en `PlayableOptimized`, tandis que les colliders proches du gameplay et ceux des montagnes restent presents ;
+- validation batch du profil optimise : environ 39 `MeshRenderer`, 22 lots bakes, 441 `BoxCollider` et 1042 `CapsuleCollider` dans la scene generee ;
 - les branches vides de la hierarchie generee sont supprimees apres baking ;
 - les ombres principales passent en hard shadows, avec distance d'ombre a 900 et 4 cascades pour conserver les ombres des nuages ;
 - scene regeneree avec densite visuelle elevee, sans les anciens `Ground Brush` parasites ni placages de meadow roses.

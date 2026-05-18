@@ -58,6 +58,7 @@ Manual path:
 - `grassTuftCount`: 360000 in the current DA validation scene, split into material and spatial batches so the path-edge density now reads across the whole map.
 - `heightScale`: 30, `distantMountainStrength`: 0.12, `borderMountainWallStrength`: 0.18, and `distantSpireCount`: 64 keep the valley soft while closing the horizon with overlapping mountain accents and sealed corner massifs, without adding a continuous wall surface.
 - `borderVegetationClusterCount`: 144 keeps the mountain-scrub border from thinning out by adding clustered rocks, scrub, low trees, meadow strokes, and grass along all four edges.
+- `qualityProfile`: `PlayableOptimized` is the default runtime profile; `HighVisual` keeps the full authoring density for comparison.
 - Ground rendering uses `GroundBiomeAt` so the mountain-scrub logic no longer paints a hard dark circular terrain band.
 - Border trees use mixed valley/autumn/golden/scrub biomes with limited conifers, avoiding all-spruce edges.
 - Clouds are larger volumetric low-poly masses built from more puffs and multi-row banks; their positions use a stratified sky grid so the center does not randomly empty out. Visible clouds stay warm/unlit, and hidden `Cloud Shadow Caster` meshes use a lit material with `ShadowsOnly` so they can project real sunlight shadows.
@@ -71,7 +72,9 @@ Manual path:
 - Main grass tufts are merged into spatial mesh chunks instead of individual GameObjects.
 - Path-edge grass is merged into dedicated batches.
 - Organic meadow color accents are also rendered as batched grass strokes instead of flat ground overlays.
-- Decorative static meshes are baked by material and shadow mode after generation, reducing active renderers while preserving rocks, mountain, and tree trunk colliders.
+- `PlayableOptimized` reduces far grass and meadow triangle density instead of hiding them completely; path-adjacent vegetation stays at full detail.
+- Decorative static meshes, grass batches, and meadow batches are baked by material and shadow mode after generation, reducing active renderers while preserving required collision.
+- Distant tree and rock colliders are skipped in `PlayableOptimized`; path-near gameplay colliders and mountain boundary colliders remain.
 - Source renderers are stripped after baking, and empty generated hierarchy branches are pruned.
 - Grass receives shadows but no longer casts per-blade shadows.
 - Main light shadows use hard shadows, 900 distance, and 4 cascades so overhead cloud shadow casters remain in range.
