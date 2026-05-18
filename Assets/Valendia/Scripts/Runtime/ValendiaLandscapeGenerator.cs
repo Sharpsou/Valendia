@@ -213,6 +213,7 @@ namespace Valendia.Runtime
 
             BeginMeadowBatches();
             GenerateTerrainChunks();
+            GenerateOuterMountainFootholdTerrain();
             GenerateSmoothPathRibbon();
             ScatterMeadowPatches();
             GenerateDistantSpires();
@@ -400,6 +401,92 @@ namespace Valendia.Runtime
                 new List<int>(capacity),
                 new List<int>(capacity)
             };
+        }
+
+        private void GenerateOuterMountainFootholdTerrain()
+        {
+            Transform parent = CreateContainer("Outer Mountain Foothold Terrain");
+            float halfWorld = WorldSize * 0.5f;
+            float outer = halfWorld + chunkSize * 0.62f;
+            int alongQuads = Mathf.Max(24, verticesPerChunk);
+            int depthQuads = Mathf.Max(8, verticesPerChunk / 4);
+
+            CreateFootholdTerrainPatch(parent, "North Foothold Terrain", -halfWorld, halfWorld, halfWorld, outer, alongQuads, depthQuads);
+            CreateFootholdTerrainPatch(parent, "South Foothold Terrain", -halfWorld, halfWorld, -outer, -halfWorld, alongQuads, depthQuads);
+            CreateFootholdTerrainPatch(parent, "West Foothold Terrain", -outer, -halfWorld, -halfWorld, halfWorld, depthQuads, alongQuads);
+            CreateFootholdTerrainPatch(parent, "East Foothold Terrain", halfWorld, outer, -halfWorld, halfWorld, depthQuads, alongQuads);
+
+            CreateFootholdTerrainPatch(parent, "North West Foothold Terrain", -outer, -halfWorld, halfWorld, outer, depthQuads, depthQuads);
+            CreateFootholdTerrainPatch(parent, "North East Foothold Terrain", halfWorld, outer, halfWorld, outer, depthQuads, depthQuads);
+            CreateFootholdTerrainPatch(parent, "South West Foothold Terrain", -outer, -halfWorld, -outer, -halfWorld, depthQuads, depthQuads);
+            CreateFootholdTerrainPatch(parent, "South East Foothold Terrain", halfWorld, outer, -outer, -halfWorld, depthQuads, depthQuads);
+        }
+
+        private void CreateFootholdTerrainPatch(
+            Transform parent,
+            string patchName,
+            float xMin,
+            float xMax,
+            float zMin,
+            float zMax,
+            int xQuads,
+            int zQuads)
+        {
+            int xVerts = xQuads + 1;
+            int zVerts = zQuads + 1;
+            Vector3[] vertices = new Vector3[xVerts * zVerts];
+            Vector2[] uv = new Vector2[vertices.Length];
+            Color[] colors = new Color[vertices.Length];
+            int[] triangles = new int[xQuads * zQuads * 6];
+
+            for (int z = 0; z < zVerts; z++)
+            {
+                float tZ = z / (float)zQuads;
+                float worldZ = Mathf.Lerp(zMin, zMax, tZ);
+                for (int x = 0; x < xVerts; x++)
+                {
+                    float tX = x / (float)xQuads;
+                    float worldX = Mathf.Lerp(xMin, xMax, tX);
+                    int index = z * xVerts + x;
+                    Biome biome = GroundBiomeAt(worldX, worldZ);
+                    vertices[index] = new Vector3(worldX, HeightAt(worldX, worldZ), worldZ);
+                    uv[index] = new Vector2(worldX / WorldSize, worldZ / WorldSize);
+                    colors[index] = GroundVertexColorAt(worldX, worldZ, biome);
+                }
+            }
+
+            int triangle = 0;
+            for (int z = 0; z < zQuads; z++)
+            {
+                for (int x = 0; x < xQuads; x++)
+                {
+                    int i = z * xVerts + x;
+                    triangles[triangle++] = i;
+                    triangles[triangle++] = i + xVerts;
+                    triangles[triangle++] = i + 1;
+                    triangles[triangle++] = i + 1;
+                    triangles[triangle++] = i + xVerts;
+                    triangles[triangle++] = i + xVerts + 1;
+                }
+            }
+
+            Mesh mesh = new Mesh { name = $"{patchName} mesh" };
+            mesh.indexFormat = vertices.Length > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+            mesh.vertices = vertices;
+            mesh.uv = uv;
+            mesh.colors = colors;
+            mesh.triangles = triangles;
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+
+            GameObject patch = CreateMeshObject(patchName, mesh, scrubGroundMaterial, parent);
+            patch.isStatic = true;
+            MeshCollider collider = patch.AddComponent<MeshCollider>();
+            collider.sharedMesh = mesh;
+            MeshRenderer renderer = patch.GetComponent<MeshRenderer>();
+            renderer.receiveShadows = true;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
         private void GenerateSmoothPathRibbon()

@@ -153,6 +153,8 @@ Derniere passe visuelle :
 - arbres ajustes vers `img_DA/img2.jpg` : moins de coniferes parasites, rochers plus bas, canopees moins en parasol avec moins de galette basse et plus de volume dans les lobes superieurs ;
 - correction proportion arbres : feuillage broadleaf abaisse autour du sommet du tronc, tronc legerement raccourci, branches remontees pour entrer dans la masse de feuilles au lieu de rester visibles sous une canopee trop haute ;
 - passe sol prudente : ajout d'un micro-relief de 12 cm max environ, attenue sur le chemin, plus texture organique et normal map 128x128 tuilees sur les materiaux de terrain sans toucher au ruban de chemin ;
+- ajout d'un anneau visible de terrain de foothold avec `MeshCollider` pour prolonger le sol jouable jusqu'a la base des montagnes, sans barriere invisible ;
+- validation batch du foothold : 8 patches de terrain supplementaires, `MeshCollider` terrain passes a 24, le joueur ne doit plus tomber entre le bord de map et les montagnes ;
 - preview regeneree apres chaque passe couleur, derniere image de controle dans `Assets/Valendia/Docs/ValendiaPrototypePreview.png`.
 
 Passe performance :

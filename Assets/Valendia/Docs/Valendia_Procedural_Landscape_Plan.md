@@ -64,6 +64,7 @@ Manual path:
 - Clouds are larger volumetric low-poly masses built from more puffs and multi-row banks; their positions use a stratified sky grid so the center does not randomly empty out. Visible clouds stay warm/unlit, and hidden `Cloud Shadow Caster` meshes use a lit material with `ShadowsOnly` so they can project real sunlight shadows.
 - Border mountains and generated rocks receive approximate `BoxCollider` components so the player cannot walk through them.
 - Trees receive trunk-level `CapsuleCollider` components so the player cannot walk through trunks while foliage remains non-blocking.
+- The main terrain is extended by visible foothold patches with `MeshCollider` components, so the playable ground reaches the base of the surrounding mountains instead of ending before them.
 - Existing generated scenes self-heal through `Ensure Generated Landscape Complete`, which adds missing mountain accents, fills sparse borders with scrub, rocks, low trees, and grass, then bakes eligible static renderers.
 - `flowerRibbonCount`: 32 in the current organic vegetation pass; violet/pink is an accent carried by grass/flowers, not a ground material.
 
