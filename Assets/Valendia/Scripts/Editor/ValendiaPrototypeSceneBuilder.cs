@@ -109,6 +109,29 @@ namespace Valendia.Editor
                 $"Assets/Valendia/Docs/ValendiaPreview_clouds_{stamp}.png");
         }
 
+        [MenuItem("Valendia/Benchmark Generation")]
+        public static void BenchmarkGeneration()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            GameObject world = new GameObject("Valendia World Benchmark");
+            ValendiaLandscapeGenerator generator = world.AddComponent<ValendiaLandscapeGenerator>();
+            System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            generator.Generate();
+            stopwatch.Stop();
+
+            int rendererCount = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None).Length;
+            int lodGroupCount = Object.FindObjectsByType<LODGroup>(FindObjectsSortMode.None).Length;
+            int meshColliderCount = Object.FindObjectsByType<MeshCollider>(FindObjectsSortMode.None).Length;
+            int boxColliderCount = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None).Length;
+            int capsuleColliderCount = Object.FindObjectsByType<CapsuleCollider>(FindObjectsSortMode.None).Length;
+
+            Debug.Log(
+                $"Valendia generation benchmark: {stopwatch.Elapsed.TotalSeconds:0.00}s, " +
+                $"{rendererCount} MeshRenderers, {lodGroupCount} LODGroups, " +
+                $"{meshColliderCount} MeshColliders, {boxColliderCount} BoxColliders, {capsuleColliderCount} CapsuleColliders.");
+        }
+
         private static float WorldHalf(ValendiaLandscapeGenerator generator)
         {
             const float sampleLimit = 2000f;
