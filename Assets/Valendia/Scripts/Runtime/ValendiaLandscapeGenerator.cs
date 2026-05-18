@@ -87,8 +87,9 @@ namespace Valendia.Runtime
         private const int MaxMeadowPatchVertices = 720;
         private const int GroundDetailTextureSize = 128;
         private const int MaxCombinedRendererVertices = 900000;
-        private const float FullGrassDetailPathDistance = 72f;
-        private const float ReducedGrassDetailPathDistance = 210f;
+        private const float GrassLod0ScreenHeight = 0.075f;
+        private const float GrassLod1ScreenHeight = 0.032f;
+        private const float GrassLod2ScreenHeight = 0.001f;
 
         private Transform generatedRoot;
         private Transform meadowBatchRoot;
@@ -170,8 +171,8 @@ namespace Valendia.Runtime
         private float WorldSize => chunksPerAxis * chunkSize;
         private Vector2 WorldMin => new Vector2(-WorldSize * 0.5f, -WorldSize * 0.5f);
         private bool IsPlayableOptimized => qualityProfile == GenerationQualityProfile.PlayableOptimized;
-        private int EffectiveGrassTuftCount => IsPlayableOptimized ? Mathf.RoundToInt(grassTuftCount * 0.86f) : grassTuftCount;
-        private int EffectiveMeadowPatchCount => IsPlayableOptimized ? Mathf.RoundToInt(meadowPatchCount * 0.88f) : meadowPatchCount;
+        private int EffectiveGrassTuftCount => grassTuftCount;
+        private int EffectiveMeadowPatchCount => meadowPatchCount;
         private int EffectiveFlowerPatchCount => IsPlayableOptimized ? Mathf.RoundToInt(flowerPatchCount * 0.82f) : flowerPatchCount;
 
         private void Start()
@@ -1374,7 +1375,7 @@ namespace Valendia.Runtime
                 FlushMeadowBatchChunk(batch, chunk);
             }
 
-            AddOrganicMeadowPatchGeometry(batch.Vertices[chunk], batch.Triangles[chunk], center, biome, random, sizeMultiplier, GrassDetailAt(center));
+            AddOrganicMeadowPatchGeometry(batch.Vertices[chunk], batch.Triangles[chunk], center, biome, random, sizeMultiplier);
         }
 
         private MeadowBatchState MeadowBatchForBiome(Biome biome, System.Random random)
@@ -1434,9 +1435,7 @@ namespace Valendia.Runtime
             mesh.RecalculateBounds();
 
             Transform parent = meadowBatchRoot != null ? meadowBatchRoot : generatedRoot;
-            GameObject batchObject = CreateMeshObject($"{batch.Prefix} {chunk:00}-{batch.Indexes[chunk]:00}", mesh, batch.Material, parent);
-            batchObject.isStatic = true;
-            ConfigureGrassRenderer(batchObject.GetComponent<MeshRenderer>());
+            CreateGrassLodObject($"{batch.Prefix} {chunk:00}-{batch.Indexes[chunk]:00}", mesh, batch.Material, parent);
 
             vertices.Clear();
             triangles.Clear();
@@ -1449,14 +1448,13 @@ namespace Valendia.Runtime
             Vector3 center,
             Biome biome,
             System.Random random,
-            float sizeMultiplier,
-            float detail)
+            float sizeMultiplier)
         {
             float radiusX = Mathf.Lerp(1.7f, 5.4f, (float)random.NextDouble()) * sizeMultiplier;
             float radiusZ = Mathf.Lerp(0.55f, 1.8f, (float)random.NextDouble()) * sizeMultiplier;
             float rotation = Mathf.Lerp(0f, Mathf.PI * 2f, (float)random.NextDouble());
             float biomeDensity = biome == Biome.LavenderField ? 1.05f : biome == Biome.GoldenGrass ? 0.72f : 0.86f;
-            int clumps = Mathf.RoundToInt(Mathf.Lerp(7f, 16f, (float)random.NextDouble()) * Mathf.Clamp(sizeMultiplier, 0.75f, 1.9f) * biomeDensity * Mathf.Lerp(0.58f, 1f, detail));
+            int clumps = Mathf.RoundToInt(Mathf.Lerp(7f, 16f, (float)random.NextDouble()) * Mathf.Clamp(sizeMultiplier, 0.75f, 1.9f) * biomeDensity);
 
             for (int clump = 0; clump < clumps; clump++)
             {
@@ -1471,7 +1469,6 @@ namespace Valendia.Runtime
                 Vector3 clumpCenter = new Vector3(worldX, worldY, worldZ);
 
                 int blades = biome == Biome.LavenderField ? random.Next(3, 6) : random.Next(4, 7);
-                blades = Mathf.Max(2, Mathf.RoundToInt(blades * Mathf.Lerp(0.62f, 1f, detail)));
                 for (int blade = 0; blade < blades; blade++)
                 {
                     float bladeAngle = rotation + angle + Mathf.Lerp(-0.9f, 0.9f, (float)random.NextDouble());
@@ -1577,7 +1574,7 @@ namespace Valendia.Runtime
                 FlushGrassBatch(parent, vertices, triangles, ref batchIndex, objectPrefix, material);
             }
 
-            AddGrassTuftGeometry(vertices, triangles, position, random, GrassDetailAt(position));
+            AddGrassTuftGeometry(vertices, triangles, position, random);
         }
 
         private void FlushGrassBatch(
@@ -1600,9 +1597,7 @@ namespace Valendia.Runtime
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
-            GameObject batch = CreateMeshObject($"{objectPrefix} {batchIndex:00}", mesh, material, parent);
-            batch.isStatic = true;
-            ConfigureGrassRenderer(batch.GetComponent<MeshRenderer>());
+            CreateGrassLodObject($"{objectPrefix} {batchIndex:00}", mesh, material, parent);
 
             vertices.Clear();
             triangles.Clear();
@@ -1879,6 +1874,69 @@ namespace Valendia.Runtime
             renderer.receiveShadows = false;
         }
 
+        private static GameObject CreateGrassLodObject(string objectName, Mesh lod0Mesh, Material material, Transform parent)
+        {
+            GameObject root = new GameObject(objectName);
+            root.transform.SetParent(parent, false);
+            root.isStatic = true;
+
+            Mesh lod1Mesh = CreateTriangleLodMesh($"{lod0Mesh.name} LOD1", lod0Mesh, 2);
+            Mesh lod2Mesh = CreateTriangleLodMesh($"{lod0Mesh.name} LOD2", lod0Mesh, 4);
+            Renderer lod0 = CreateGrassLodRenderer(root.transform, "LOD0", lod0Mesh, material);
+            Renderer lod1 = CreateGrassLodRenderer(root.transform, "LOD1", lod1Mesh, material);
+            Renderer lod2 = CreateGrassLodRenderer(root.transform, "LOD2", lod2Mesh, material);
+
+            LODGroup lodGroup = root.AddComponent<LODGroup>();
+            lodGroup.SetLODs(new[]
+            {
+                new LOD(GrassLod0ScreenHeight, new[] { lod0 }),
+                new LOD(GrassLod1ScreenHeight, new[] { lod1 }),
+                new LOD(GrassLod2ScreenHeight, new[] { lod2 })
+            });
+            lodGroup.RecalculateBounds();
+
+            return root;
+        }
+
+        private static Renderer CreateGrassLodRenderer(Transform parent, string objectName, Mesh mesh, Material material)
+        {
+            GameObject child = CreateMeshObject(objectName, mesh, material, parent);
+            child.isStatic = true;
+            MeshRenderer renderer = child.GetComponent<MeshRenderer>();
+            ConfigureGrassRenderer(renderer);
+            return renderer;
+        }
+
+        private static Mesh CreateTriangleLodMesh(string meshName, Mesh source, int triangleStep)
+        {
+            int[] sourceTriangles = source.triangles;
+            Vector3[] sourceVertices = source.vertices;
+            int triangleCount = sourceTriangles.Length / 3;
+            int keptTriangles = Mathf.Max(1, Mathf.CeilToInt(triangleCount / (float)Mathf.Max(1, triangleStep)));
+            List<Vector3> vertices = new List<Vector3>(keptTriangles * 3);
+            List<int> triangles = new List<int>(keptTriangles * 3);
+
+            for (int triangle = 0; triangle < triangleCount; triangle += triangleStep)
+            {
+                int sourceIndex = triangle * 3;
+                int targetIndex = vertices.Count;
+                vertices.Add(sourceVertices[sourceTriangles[sourceIndex]]);
+                vertices.Add(sourceVertices[sourceTriangles[sourceIndex + 1]]);
+                vertices.Add(sourceVertices[sourceTriangles[sourceIndex + 2]]);
+                triangles.Add(targetIndex);
+                triangles.Add(targetIndex + 1);
+                triangles.Add(targetIndex + 2);
+            }
+
+            Mesh mesh = new Mesh { name = meshName };
+            mesh.indexFormat = vertices.Count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
         private void OptimizeGeneratedRenderers()
         {
             if (generatedRoot == null)
@@ -1935,7 +1993,7 @@ namespace Valendia.Runtime
             }
 
             GameObject gameObject = renderer.gameObject;
-            if (gameObject.GetComponent<MeshCollider>() != null)
+            if (gameObject.GetComponent<MeshCollider>() != null || gameObject.GetComponentInParent<LODGroup>() != null)
             {
                 return false;
             }
@@ -2371,23 +2429,9 @@ namespace Valendia.Runtime
             AddSingleTriangle(vertices, triangles, p0, p1, p2);
         }
 
-        private float GrassDetailAt(Vector3 position)
+        private static void AddGrassTuftGeometry(List<Vector3> vertices, List<int> triangles, Vector3 position, System.Random random)
         {
-            if (!IsPlayableOptimized)
-            {
-                return 1f;
-            }
-
-            float pathDistance = Mathf.Abs(position.x - PathCenterX(position.z));
-            float distanceFade = 1f - Mathf.SmoothStep(FullGrassDetailPathDistance, ReducedGrassDetailPathDistance, pathDistance);
-            float radial = new Vector2(position.x, position.z).magnitude / Mathf.Max(1f, WorldSize * 0.5f);
-            float borderBoost = Mathf.SmoothStep(0.78f, 0.98f, radial) * 0.14f;
-            return Mathf.Clamp(Mathf.Lerp(0.44f, 1f, distanceFade) + borderBoost, 0.44f, 1f);
-        }
-
-        private static void AddGrassTuftGeometry(List<Vector3> vertices, List<int> triangles, Vector3 position, System.Random random, float detail)
-        {
-            int blades = Mathf.Max(4, Mathf.RoundToInt(random.Next(7, 13) * Mathf.Clamp01(detail)));
+            int blades = random.Next(7, 13);
             float yaw = Mathf.Lerp(0f, Mathf.PI * 2f, (float)random.NextDouble());
 
             for (int i = 0; i < blades; i++)
@@ -2397,7 +2441,7 @@ namespace Valendia.Runtime
                 Vector3 localBase = new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
                 Vector3 basePoint = position + RotateYaw(localBase, yaw);
                 float bladeAngle = yaw + angle + Mathf.Lerp(-0.55f, 0.55f, (float)random.NextDouble());
-                float height = Mathf.Lerp(0.15f, 0.50f, (float)random.NextDouble()) * Mathf.Lerp(0.88f, 1f, detail);
+                float height = Mathf.Lerp(0.16f, 0.50f, (float)random.NextDouble());
                 float width = Mathf.Lerp(0.03f, 0.085f, (float)random.NextDouble());
                 AddGrassBlade(vertices, triangles, basePoint, bladeAngle, height, width, Mathf.Lerp(0.025f, 0.10f, (float)random.NextDouble()));
             }

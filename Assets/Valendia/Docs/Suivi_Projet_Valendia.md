@@ -161,11 +161,12 @@ Passe performance :
 - l'herbe principale n'est plus generee en dizaines de milliers de GameObjects individuels ;
 - les touffes d'herbe sont maintenant regroupees en lots spatiaux par palette (`Fresh/Olive/Golden/Rose Grass Batch`) pour reduire la charge CPU, les draw calls et la taille scene ;
 - l'herbe des bords de chemin est aussi batchee (`Path Edge Grass Batch`) ;
-- en `PlayableOptimized`, les herbes et strokes de prairie loin du chemin gardent une presence visuelle mais utilisent moins de brins, sans masquage complet ;
+- les lots d'herbe et strokes de prairie utilisent des `LODGroup` Unity avec meshes dense, moyen et leger ; le niveau suit donc la camera/joueur au runtime ;
 - les brins d'herbe ne projettent plus d'ombres individuelles, mais recoivent toujours les ombres des arbres/relief ;
-- les lots d'herbe, les strokes de prairie et les objets statiques decoratifs sont bakes par materiau et mode d'ombre apres generation ;
+- les objets statiques decoratifs sont bakes par materiau et mode d'ombre apres generation ; les lots d'herbe restent separes pour laisser leurs `LODGroup` fonctionner ;
 - les colliders de troncs, rochers, montagnes et terrain restent presents dans les deux profils pour permettre l'exploration libre sur toute la carte ;
-- validation batch du profil optimise avec colliders complets : environ 39 `MeshRenderer`, 22 lots bakes, 1204 `BoxCollider` et 2131 `CapsuleCollider` dans la scene generee ;
+- validation batch du LOD d'herbe : 309 `LODGroup`, avec 436 lots `Fresh Grass`, 180 `Olive Grass`, 124 `Golden Grass`, 28 `Rose Grass` et 468 lots `Meadow Stroke` ;
+- validation batch du profil optimise avec colliders complets : environ 956 `MeshRenderer` incluant les niveaux LOD d'herbe, 12 lots bakes hors herbe, 1186 `BoxCollider` et 2135 `CapsuleCollider` dans la scene generee ;
 - les branches vides de la hierarchie generee sont supprimees apres baking ;
 - les ombres principales passent en hard shadows, avec distance d'ombre a 900 et 4 cascades pour conserver les ombres des nuages ;
 - scene regeneree avec densite visuelle elevee, sans les anciens `Ground Brush` parasites ni placages de meadow roses.
@@ -188,8 +189,8 @@ Cette decision evite de versionner une scene procedurale d'environ 460 Mo et gar
 
 ## Risques Connus
 
-- La derniere passe DA assume une densite tres elevee pour valider l'intention visuelle ; l'herbe est batchee mais reste le principal budget GPU.
-- Les meshes facettes maison ameliorent le rendu, mais une vraie phase LOD/instancing reste necessaire avant d'augmenter encore la densite.
+- La derniere passe DA assume une densite tres elevee pour valider l'intention visuelle ; l'herbe est batchee et geree par `LODGroup`, mais reste le principal budget GPU.
+- Les meshes facettes maison ameliorent le rendu, mais une vraie phase GPU instancing/indirect rendering restera utile si l'herbe reste trop couteuse.
 - Les materiaux generes en runtime ne sont pas encore des assets persistants.
 - Les textures de sol sont generees en memoire par le generateur ; si elles conviennent visuellement, elles pourront etre bakees plus tard en assets partages.
 - Les performances n'ont pas encore ete mesurees en Play Mode.
@@ -205,9 +206,7 @@ Cette decision evite de versionner une scene procedurale d'environ 460 Mo et gar
    - transitions de biomes et zones dorees encore moins plates,
    - nuages avec contours moins polygonaux.
 4. Ajuster le seed, les densites et les couleurs apres validation visuelle dans l'editeur et dans la preview.
-5. Optimiser la vegetation :
-   - LOD,
-   - GPU instancing ou indirect rendering si l'herbe reste trop couteuse.
+5. Optimiser la vegetation avec GPU instancing ou indirect rendering si les `LODGroup` d'herbe restent trop couteux.
 6. Ajouter des points d'interet visibles depuis le chemin.
 
 ## Definition Du Premier Jalonnement
