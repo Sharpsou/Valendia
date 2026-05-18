@@ -35,6 +35,7 @@ Generated scene note:
 - `Assets/Valendia/ValendiaPrototype.unity` is intentionally ignored by Git because the generated validation scene is very large.
 - Regenerate it from the Unity menu after cloning or cleaning the workspace.
 - `Assets/Valendia/Docs/ValendiaPrototypePreview.png` is also a local generated artifact.
+- `Assets/Valendia/ValendiaBootstrap.unity` is the lightweight build scene. It references shared material assets and generates the world at runtime, avoiding the 1+ GB generated scene in Windows builds.
 
 Manual path:
 
@@ -80,6 +81,12 @@ Manual path:
 - Source renderers are stripped after baking, and empty generated hierarchy branches are pruned.
 - Grass receives shadows but no longer casts per-blade shadows.
 - Main light shadows use hard shadows, 900 distance, and 4 cascades so overhead cloud shadow casters remain in range.
+
+## Windows Build
+
+- Use `Valendia > Build Windows Player` to create `Builds/Windows/Valendia.exe`.
+- The build uses the lightweight bootstrap scene and generates the world on launch.
+- Latest local Windows build size: about 88 MB.
 
 ## Git Hygiene
 

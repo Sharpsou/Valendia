@@ -1,5 +1,6 @@
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,7 +11,10 @@ namespace Valendia.Editor
     public static class ValendiaPrototypeSceneBuilder
     {
         private const string ScenePath = "Assets/Valendia/ValendiaPrototype.unity";
+        private const string BootstrapScenePath = "Assets/Valendia/ValendiaBootstrap.unity";
         private const string PreviewPath = "Assets/Valendia/Docs/ValendiaPrototypePreview.png";
+        private const string WindowsBuildPath = "Builds/Windows/Valendia.exe";
+        private const string MaterialFolder = "Assets/Valendia/Materials";
 
         [MenuItem("Valendia/Create Prototype Scene")]
         public static void CreatePrototypeScene()
@@ -24,6 +28,38 @@ namespace Valendia.Editor
             EditorSceneManager.SaveScene(scene, ScenePath);
             Selection.activeGameObject = generator.gameObject;
             EditorGUIUtility.PingObject(generator.gameObject);
+        }
+
+        [MenuItem("Valendia/Create Bootstrap Scene")]
+        public static void CreateBootstrapScene()
+        {
+            CreateBootstrapSceneAsset();
+        }
+
+        [MenuItem("Valendia/Build Windows Player")]
+        public static void BuildWindowsPlayer()
+        {
+            CreateBootstrapSceneAsset();
+
+            string absoluteBuildPath = Path.GetFullPath(WindowsBuildPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(absoluteBuildPath));
+
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = new[] { BootstrapScenePath },
+                locationPathName = WindowsBuildPath,
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.None
+            };
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+            Debug.Log($"Valendia Windows build: {summary.result}, {summary.totalSize / (1024f * 1024f):0.0} MB, {summary.totalTime.TotalSeconds:0.0}s, {WindowsBuildPath}");
+
+            if (summary.result != BuildResult.Succeeded)
+            {
+                throw new System.InvalidOperationException($"Valendia Windows build failed: {summary.result}");
+            }
         }
 
         [MenuItem("Valendia/Create Prototype Preview")]
@@ -184,6 +220,163 @@ namespace Valendia.Editor
             ValendiaLandscapeGenerator generator = world.AddComponent<ValendiaLandscapeGenerator>();
             generator.Generate();
             return generator;
+        }
+
+        private static ValendiaLandscapeGenerator CreateBootstrapWorld()
+        {
+            GameObject world = new GameObject("Valendia World");
+            ValendiaLandscapeGenerator generator = world.AddComponent<ValendiaLandscapeGenerator>();
+            AssignRuntimeMaterials(generator);
+            return generator;
+        }
+
+        private static ValendiaLandscapeGenerator CreateBootstrapSceneAsset()
+        {
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            ValendiaLandscapeGenerator generator = CreateBootstrapWorld();
+            CreateLighting();
+            CreatePlayer(generator);
+
+            EditorSceneManager.SaveScene(scene, BootstrapScenePath);
+            AssetDatabase.ImportAsset(BootstrapScenePath);
+            Selection.activeGameObject = generator.gameObject;
+            EditorGUIUtility.PingObject(generator.gameObject);
+            Debug.Log($"Valendia bootstrap scene written to {BootstrapScenePath}");
+            return generator;
+        }
+
+        private static void AssignRuntimeMaterials(ValendiaLandscapeGenerator generator)
+        {
+            EnsureMaterialFolder();
+            SerializedObject serializedGenerator = new SerializedObject(generator);
+            SetMaterial(serializedGenerator, "skyboxMaterial", EnsureSkyboxMaterial("Valendia Painted Cyan Sky"));
+            SetMaterial(serializedGenerator, "groundMaterial", EnsureLitMaterial("Valendia Fresh Valley Ground", new Color(0.30f, 0.56f, 0.38f), 0.18f, true));
+            SetMaterial(serializedGenerator, "autumnGroundMaterial", EnsureLitMaterial("Valendia Autumn Grove Ground", new Color(0.42f, 0.48f, 0.30f), 0.18f, true));
+            SetMaterial(serializedGenerator, "goldenGrassGroundMaterial", EnsureLitMaterial("Valendia Golden Grass Ground", new Color(0.48f, 0.54f, 0.32f), 0.18f, true));
+            SetMaterial(serializedGenerator, "lavenderGroundMaterial", EnsureLitMaterial("Valendia Lavender Field Ground", new Color(0.34f, 0.52f, 0.42f), 0.18f, true));
+            SetMaterial(serializedGenerator, "scrubGroundMaterial", EnsureLitMaterial("Valendia Mountain Scrub Ground", new Color(0.32f, 0.42f, 0.30f), 0.2f, true));
+            SetMaterial(serializedGenerator, "pathMaterial", EnsureLitMaterial("Valendia Warm Dust Path", new Color(0.56f, 0.39f, 0.22f), 0.28f, true));
+            SetMaterial(serializedGenerator, "meadowMaterial", EnsureLitMaterial("Valendia Meadow Brush", new Color(0.22f, 0.50f, 0.30f), 0.16f, true));
+            SetMaterial(serializedGenerator, "goldenMeadowMaterial", EnsureLitMaterial("Valendia Golden Meadow Brush", new Color(0.50f, 0.50f, 0.24f), 0.16f, true));
+            SetMaterial(serializedGenerator, "lavenderMeadowMaterial", EnsureLitMaterial("Valendia Lavender Meadow Brush", new Color(0.58f, 0.38f, 0.58f), 0.16f, true));
+            SetMaterial(serializedGenerator, "trunkMaterial", EnsureLitMaterial("Valendia Faceted Trunk", new Color(0.26f, 0.14f, 0.09f), 0.32f, false));
+            SetMaterial(serializedGenerator, "leafMaterial", EnsureLitMaterial("Valendia Spring Leaf Crowns", new Color(0.20f, 0.49f, 0.25f), 0.28f, true));
+            SetMaterial(serializedGenerator, "warmLeafMaterial", EnsureLitMaterial("Valendia Warm Leaf Crowns", new Color(0.72f, 0.50f, 0.22f), 0.28f, true));
+            SetMaterial(serializedGenerator, "darkLeafMaterial", EnsureLitMaterial("Valendia Deep Green Crowns", new Color(0.12f, 0.27f, 0.12f), 0.3f, true));
+            SetMaterial(serializedGenerator, "autumnLeafMaterial", EnsureLitMaterial("Valendia Autumn Leaf Crowns", new Color(0.63f, 0.38f, 0.18f), 0.28f, true));
+            SetMaterial(serializedGenerator, "grassMaterial", EnsureLitMaterial("Valendia Fresh Green Grass Blades", new Color(0.34f, 0.62f, 0.34f), 0.2f, true));
+            SetMaterial(serializedGenerator, "oliveGrassMaterial", EnsureLitMaterial("Valendia Olive Grass Blades", new Color(0.28f, 0.44f, 0.25f), 0.22f, true));
+            SetMaterial(serializedGenerator, "goldenGrassBladeMaterial", EnsureLitMaterial("Valendia Golden Straw Grass Blades", new Color(0.72f, 0.60f, 0.25f), 0.18f, true));
+            SetMaterial(serializedGenerator, "roseGrassMaterial", EnsureLitMaterial("Valendia Rose Heather Grass Blades", new Color(0.72f, 0.40f, 0.62f), 0.16f, true));
+            SetMaterial(serializedGenerator, "flowerMaterial", EnsureLitMaterial("Valendia Lavender Blossoms", new Color(0.92f, 0.36f, 0.72f), 0.12f, true));
+            SetMaterial(serializedGenerator, "scrubMaterial", EnsureLitMaterial("Valendia Mountain Scrub", new Color(0.29f, 0.39f, 0.25f), 0.24f, false));
+            SetMaterial(serializedGenerator, "rockMaterial", EnsureLitMaterial("Valendia Warm Limestone", new Color(0.72f, 0.62f, 0.44f), 0.38f, false));
+            SetMaterial(serializedGenerator, "cloudMaterial", EnsureUnlitMaterial("Valendia Soft Autumn Cloud", new Color(0.96f, 0.88f, 0.66f), true));
+            SetMaterial(serializedGenerator, "cloudShadowCasterMaterial", EnsureLitMaterial("Valendia Cloud Shadow Caster", new Color(0.88f, 0.82f, 0.68f), 0f, false));
+            serializedGenerator.ApplyModifiedPropertiesWithoutUndo();
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void EnsureMaterialFolder()
+        {
+            if (!AssetDatabase.IsValidFolder(MaterialFolder))
+            {
+                AssetDatabase.CreateFolder("Assets/Valendia", "Materials");
+            }
+        }
+
+        private static void SetMaterial(SerializedObject serializedObject, string propertyName, Material material)
+        {
+            serializedObject.FindProperty(propertyName).objectReferenceValue = material;
+        }
+
+        private static Material EnsureLitMaterial(string materialName, Color color, float smoothness, bool doubleSided)
+        {
+            Shader shader = Shader.Find("Standard");
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Lit");
+            }
+
+            Material material = EnsureMaterialAsset(materialName, shader);
+            ConfigureMaterialColor(material, color, smoothness);
+            if (doubleSided)
+            {
+                ConfigureDoubleSidedMaterial(material);
+            }
+
+            return material;
+        }
+
+        private static Material EnsureUnlitMaterial(string materialName, Color color, bool doubleSided)
+        {
+            Shader shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+            {
+                shader = Shader.Find("Universal Render Pipeline/Unlit");
+            }
+
+            Material material = EnsureMaterialAsset(materialName, shader);
+            ConfigureMaterialColor(material, color, 0f);
+            if (doubleSided)
+            {
+                ConfigureDoubleSidedMaterial(material);
+            }
+
+            return material;
+        }
+
+        private static Material EnsureSkyboxMaterial(string materialName)
+        {
+            Material material = EnsureMaterialAsset(materialName, Shader.Find("Skybox/Procedural"));
+            if (material.HasProperty("_SkyTint")) material.SetColor("_SkyTint", new Color(0.12f, 0.55f, 0.40f));
+            if (material.HasProperty("_GroundColor")) material.SetColor("_GroundColor", new Color(0.52f, 0.48f, 0.32f));
+            if (material.HasProperty("_Exposure")) material.SetFloat("_Exposure", 0.72f);
+            if (material.HasProperty("_AtmosphereThickness")) material.SetFloat("_AtmosphereThickness", 0.80f);
+            if (material.HasProperty("_SunSize")) material.SetFloat("_SunSize", 0.05f);
+            if (material.HasProperty("_SunSizeConvergence")) material.SetFloat("_SunSizeConvergence", 5f);
+            return material;
+        }
+
+        private static Material EnsureMaterialAsset(string materialName, Shader shader)
+        {
+            if (shader == null)
+            {
+                throw new System.InvalidOperationException($"Missing shader for Valendia material '{materialName}'.");
+            }
+
+            string path = $"{MaterialFolder}/{materialName}.mat";
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader) { name = materialName };
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else
+            {
+                material.shader = shader;
+            }
+
+            material.enableInstancing = true;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static void ConfigureMaterialColor(Material material, Color color, float smoothness)
+        {
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_Smoothness")) material.SetFloat("_Smoothness", smoothness);
+            if (material.HasProperty("_Glossiness")) material.SetFloat("_Glossiness", smoothness);
+        }
+
+        private static void ConfigureDoubleSidedMaterial(Material material)
+        {
+            material.doubleSidedGI = true;
+            if (material.HasProperty("_Cull")) material.SetFloat("_Cull", 0f);
+            if (material.HasProperty("_CullMode")) material.SetFloat("_CullMode", 0f);
+            if (material.HasProperty("_DoubleSidedEnable")) material.SetFloat("_DoubleSidedEnable", 1f);
         }
 
         private static void CreateLighting()
