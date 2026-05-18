@@ -89,7 +89,6 @@ namespace Valendia.Runtime
         private const int MaxCombinedRendererVertices = 900000;
         private const float FullGrassDetailPathDistance = 72f;
         private const float ReducedGrassDetailPathDistance = 210f;
-        private const float DetailColliderPathDistance = 180f;
 
         private Transform generatedRoot;
         private Transform meadowBatchRoot;
@@ -1203,16 +1202,6 @@ namespace Valendia.Runtime
             return Mathf.Abs(x - PathCenterX(z)) <= radius;
         }
 
-        private bool ShouldUseDetailCollider(Vector3 position)
-        {
-            if (!IsPlayableOptimized)
-            {
-                return true;
-            }
-
-            return Mathf.Abs(position.x - PathCenterX(position.z)) <= DetailColliderPathDistance;
-        }
-
         private Biome BiomeAt(float x, float z)
         {
             float radial = new Vector2(x, z).magnitude / (WorldSize * 0.5f);
@@ -1325,10 +1314,7 @@ namespace Valendia.Runtime
                 Mathf.Lerp(-2f, 2f, (float)random.NextDouble()),
                 0f,
                 Mathf.Lerp(-3f, 3f, (float)random.NextDouble()));
-            if (ShouldUseDetailCollider(position))
-            {
-                AddTreeTrunkCollider(tree, trunkHeight);
-            }
+            AddTreeTrunkCollider(tree, trunkHeight);
 
             Material crownMaterial = LeafMaterialForBiome(biome, random);
             float coniferChance = coniferChanceOverride >= 0f
@@ -1693,10 +1679,7 @@ namespace Valendia.Runtime
                 Mathf.Lerp(0.24f, 0.72f, (float)random.NextDouble()),
                 Mathf.Lerp(0.9f, 2.5f, (float)random.NextDouble()));
             rock.isStatic = true;
-            if (ShouldUseDetailCollider(position))
-            {
-                AddApproximateBoxCollider(rock, new Vector3(0f, 0.02f, 0f), new Vector3(1.35f, 1.15f, 1.35f));
-            }
+            AddApproximateBoxCollider(rock, new Vector3(0f, 0.02f, 0f), new Vector3(1.35f, 1.15f, 1.35f));
         }
 
         private void CreateBroadCanopy(Transform tree, Material crownMaterial, float trunkHeight, System.Random random)

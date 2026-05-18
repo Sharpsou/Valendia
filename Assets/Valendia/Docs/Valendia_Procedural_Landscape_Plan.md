@@ -73,8 +73,8 @@ Manual path:
 - Path-edge grass is merged into dedicated batches.
 - Organic meadow color accents are also rendered as batched grass strokes instead of flat ground overlays.
 - `PlayableOptimized` reduces far grass and meadow triangle density instead of hiding them completely; path-adjacent vegetation stays at full detail.
-- Decorative static meshes, grass batches, and meadow batches are baked by material and shadow mode after generation, reducing active renderers while preserving required collision.
-- Distant tree and rock colliders are skipped in `PlayableOptimized`; path-near gameplay colliders and mountain boundary colliders remain.
+- Decorative static meshes, grass batches, and meadow batches are baked by material and shadow mode after generation, reducing active renderers while preserving collision.
+- Tree trunk, rock, terrain, and mountain colliders remain present in both quality profiles so free exploration works across the whole map.
 - Source renderers are stripped after baking, and empty generated hierarchy branches are pruned.
 - Grass receives shadows but no longer casts per-blade shadows.
 - Main light shadows use hard shadows, 900 distance, and 4 cascades so overhead cloud shadow casters remain in range.
