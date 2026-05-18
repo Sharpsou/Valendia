@@ -87,8 +87,8 @@ namespace Valendia.Runtime
         private const int MaxMeadowPatchVertices = 720;
         private const int GroundDetailTextureSize = 128;
         private const int MaxCombinedRendererVertices = 900000;
-        private const float GrassLod0ScreenHeight = 0.075f;
-        private const float GrassLod1ScreenHeight = 0.032f;
+        private const float GrassLod0ScreenHeight = 0.095f;
+        private const float GrassLod1ScreenHeight = 0.046f;
         private const float GrassLod2ScreenHeight = 0.001f;
 
         private Transform generatedRoot;
@@ -171,7 +171,7 @@ namespace Valendia.Runtime
         private float WorldSize => chunksPerAxis * chunkSize;
         private Vector2 WorldMin => new Vector2(-WorldSize * 0.5f, -WorldSize * 0.5f);
         private bool IsPlayableOptimized => qualityProfile == GenerationQualityProfile.PlayableOptimized;
-        private int EffectiveGrassTuftCount => grassTuftCount;
+        private int EffectiveGrassTuftCount => IsPlayableOptimized ? Mathf.RoundToInt(grassTuftCount * 0.90f) : grassTuftCount;
         private int EffectiveMeadowPatchCount => meadowPatchCount;
         private int EffectiveFlowerPatchCount => IsPlayableOptimized ? Mathf.RoundToInt(flowerPatchCount * 0.82f) : flowerPatchCount;
 
@@ -2756,6 +2756,8 @@ namespace Valendia.Runtime
 
         private void ApplyAtmosphere()
         {
+            ApplyRuntimeResolution();
+
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.34f, 0.52f, 0.52f);
             RenderSettings.ambientEquatorColor = new Color(0.39f, 0.32f, 0.18f);
@@ -2779,6 +2781,19 @@ namespace Valendia.Runtime
             QualitySettings.shadowCascades = 4;
 
             DynamicGI.UpdateEnvironment();
+        }
+
+        private void ApplyRuntimeResolution()
+        {
+            if (!Application.isPlaying || !IsPlayableOptimized)
+            {
+                return;
+            }
+
+            if (Screen.width != 1280 || Screen.height != 800)
+            {
+                Screen.SetResolution(1280, 800, FullScreenMode.FullScreenWindow);
+            }
         }
 
         private static Light FindOrCreateSun()

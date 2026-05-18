@@ -73,7 +73,8 @@ Manual path:
 - Main grass tufts are merged into spatial mesh chunks instead of individual GameObjects.
 - Path-edge grass is merged into dedicated batches.
 - Organic meadow color accents are also rendered as batched grass strokes instead of flat ground overlays.
-- Grass and meadow batches use Unity `LODGroup` components with dense, medium, and light meshes, so detail follows the player camera instead of the path.
+- Grass and meadow batches use Unity `LODGroup` components with dense, medium, and light meshes, so detail follows the player camera instead of the path. `PlayableOptimized` switches grass LODs earlier and uses 90% of the authored grass count so close-range density remains visually stable while far-field cost drops.
+- `PlayableOptimized` applies a runtime 1280x800 resolution target for a lighter default play profile.
 - Decorative static meshes are baked by material and shadow mode after generation, reducing active renderers while preserving collision. Grass batches stay out of this bake so their `LODGroup` can work at runtime.
 - Tree trunk, rock, terrain, and mountain colliders remain present in both quality profiles so free exploration works across the whole map.
 - Source renderers are stripped after baking, and empty generated hierarchy branches are pruned.

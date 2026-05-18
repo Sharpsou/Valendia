@@ -164,10 +164,13 @@ Passe performance :
 - les touffes d'herbe sont maintenant regroupees en lots spatiaux par palette (`Fresh/Olive/Golden/Rose Grass Batch`) pour reduire la charge CPU, les draw calls et la taille scene ;
 - l'herbe des bords de chemin est aussi batchee (`Path Edge Grass Batch`) ;
 - les lots d'herbe et strokes de prairie utilisent des `LODGroup` Unity avec meshes dense, moyen et leger ; le niveau suit donc la camera/joueur au runtime ;
+- les seuils LOD de l'herbe basculent plus tot en profil optimise, avec 90% de la densite d'herbe authoree pour reduire le cout sans vider le premier plan ;
+- le profil optimise applique une cible runtime 1280x800 ;
 - les brins d'herbe ne projettent plus d'ombres individuelles, mais recoivent toujours les ombres des arbres/relief ;
 - les objets statiques decoratifs sont bakes par materiau et mode d'ombre apres generation ; les lots d'herbe restent separes pour laisser leurs `LODGroup` fonctionner ;
 - les colliders de troncs, rochers, montagnes et terrain restent presents dans les deux profils pour permettre l'exploration libre sur toute la carte ;
 - validation batch du LOD d'herbe : 309 `LODGroup`, avec 436 lots `Fresh Grass`, 180 `Olive Grass`, 124 `Golden Grass`, 28 `Rose Grass` et 468 lots `Meadow Stroke` ;
+- validation apres LOD plus agressif et densite herbe 90% : 292 `LODGroup`, 396 lots `Fresh Grass`, 164 `Olive Grass`, 112 `Golden Grass`, 28 `Rose Grass`, 468 lots `Meadow Stroke` ;
 - validation batch du profil optimise avec colliders complets : environ 956 `MeshRenderer` incluant les niveaux LOD d'herbe, 12 lots bakes hors herbe, 1186 `BoxCollider` et 2135 `CapsuleCollider` dans la scene generee ;
 - les branches vides de la hierarchie generee sont supprimees apres baking ;
 - les ombres principales passent en hard shadows, avec distance d'ombre a 900 et 4 cascades pour conserver les ombres des nuages ;
