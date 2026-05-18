@@ -134,13 +134,13 @@ Elle contient :
 
 Derniere passe visuelle :
 
-- `grassTuftCount` porte a 90000, avec touffes plus petites et plus basses pour former un tapis plus dense sans grandes lames ;
+- `grassTuftCount` porte a 360000 pour appliquer la densite forte du bord du chemin a toute la carte ;
 - `pathEdgePatchCount` porte a 2400 pour densifier les bords du chemin en premiere personne ;
 - correction de la passe ratee : suppression des accents de sol batches qui creaient des intersections de polygones ;
 - suppression du micro-relief ajoute qui creait trop de vallons ;
 - `heightScale` abaisse a 30 et `distantMountainStrength` a 0.12 pour revenir a un relief doux type `img_DA/img2.jpg` ;
 - chemin rendu quasi non destructif dans la topographie pour eviter les parois trop proches ;
-- `meadowPatchCount` stabilise a 1450, `flowerPatchCount` a 680 et `flowerRibbonCount` a 32 ;
+- `meadowPatchCount` stabilise a 2400, `flowerPatchCount` a 680 et `flowerRibbonCount` a 32 ;
 - mini-forets authorees densifiees de 18 a 31 arbres par bosquet ;
 - ajout de `forestPocketCount` a 12 pour creer des poches de foret hors chemin ;
 - feuillages, herbe et fleurs en materiaux double-face ;
@@ -149,6 +149,7 @@ Derniere passe visuelle :
 - lumiere directionnelle de fin d'apres-midi : soleil plus bas, chaud, avec ombres plus marquees et ambiante reduite ;
 - repartition des biomes ajustee pour eviter le retour du grand tapis mauve ou jaune uniforme : le sol reste vert/olive neutre, les zones dorees et lavande passent par les brins d'herbe et fleurs ;
 - suppression des anciens placages couleur `Painterly Meadow Patch` : remplaces par des lots spatiaux `Organic Meadow Grass Batches` composes de strokes/brins verticaux, plus organiques et plus compatibles performance ;
+- variantes d'herbe vert frais, olive, dore et rose/lavande appliquees aux lots globaux, aux bords de chemin et aux bords de carte ;
 - arbres ajustes vers `img_DA/img2.jpg` : moins de coniferes parasites, rochers plus bas, canopees moins en parasol avec moins de galette basse et plus de volume dans les lobes superieurs ;
 - correction proportion arbres : feuillage broadleaf abaisse autour du sommet du tronc, tronc legerement raccourci, branches remontees pour entrer dans la masse de feuilles au lieu de rester visibles sous une canopee trop haute ;
 - passe sol prudente : ajout d'un micro-relief de 12 cm max environ, attenue sur le chemin, plus texture organique et normal map 128x128 tuilees sur les materiaux de terrain sans toucher au ruban de chemin ;
@@ -157,11 +158,13 @@ Derniere passe visuelle :
 Passe performance :
 
 - l'herbe principale n'est plus generee en dizaines de milliers de GameObjects individuels ;
-- les touffes d'herbe sont maintenant regroupees en lots spatiaux (`Grass Chunk`) pour reduire la charge CPU, les draw calls et la taille scene ;
+- les touffes d'herbe sont maintenant regroupees en lots spatiaux par palette (`Fresh/Olive/Golden/Rose Grass Batch`) pour reduire la charge CPU, les draw calls et la taille scene ;
 - l'herbe des bords de chemin est aussi batchee (`Path Edge Grass Batch`) ;
 - les brins d'herbe ne projettent plus d'ombres individuelles, mais recoivent toujours les ombres des arbres/relief ;
-- les ombres principales passent en hard shadows, avec distance d'ombre limitee a 180 et 2 cascades ;
-- scene regeneree : environ 460 Mo avec densite visuelle elevee, sans les anciens `Ground Brush` parasites ni placages de meadow roses.
+- les objets statiques decoratifs sont bakes par materiau et mode d'ombre apres generation, tout en conservant les colliders de troncs, rochers et montagnes ;
+- les branches vides de la hierarchie generee sont supprimees apres baking ;
+- les ombres principales passent en hard shadows, avec distance d'ombre a 900 et 4 cascades pour conserver les ombres des nuages ;
+- scene regeneree avec densite visuelle elevee, sans les anciens `Ground Brush` parasites ni placages de meadow roses.
 
 La scene generee localement est disponible ici apres generation :
 
@@ -181,12 +184,10 @@ Cette decision evite de versionner une scene procedurale d'environ 460 Mo et gar
 
 ## Risques Connus
 
-- Beaucoup de GameObjects pour l'herbe peuvent devenir couteux si la densite augmente fortement.
-- La derniere passe DA assume une densite tres elevee pour valider l'intention visuelle ; la scene est encore lourde avec 90000 touffes batchees, et il faudra reduire ou instancier l'herbe si le Play Mode sature.
+- La derniere passe DA assume une densite tres elevee pour valider l'intention visuelle ; l'herbe est batchee mais reste le principal budget GPU.
 - Les meshes facettes maison ameliorent le rendu, mais une vraie phase LOD/instancing reste necessaire avant d'augmenter encore la densite.
 - Les materiaux generes en runtime ne sont pas encore des assets persistants.
 - Les textures de sol sont generees en memoire par le generateur ; si elles conviennent visuellement, elles pourront etre bakees plus tard en assets partages.
-- La scene prototype est creee automatiquement, mais elle contient encore beaucoup d'objets separes.
 - Les performances n'ont pas encore ete mesurees en Play Mode.
 - La direction artistique progresse, mais reste trop procedurale/brute par rapport aux references : il faudra une passe asset/shape plus authoring pour les arbres, nuages et montagnes.
 
@@ -200,15 +201,10 @@ Cette decision evite de versionner une scene procedurale d'environ 460 Mo et gar
    - transitions de biomes et zones dorees encore moins plates,
    - nuages avec contours moins polygonaux.
 4. Ajuster le seed, les densites et les couleurs apres validation visuelle dans l'editeur et dans la preview.
-5. Ajouter un mode de bake optionnel :
-   - meshes terrain sauvegardes,
-   - objets statiques conserves,
-   - seed note dans la scene.
-6. Optimiser la vegetation :
+5. Optimiser la vegetation :
    - LOD,
-   - batching,
-   - GPU instancing ou regroupement par mesh.
-7. Ajouter des points d'interet visibles depuis le chemin.
+   - GPU instancing ou indirect rendering si l'herbe reste trop couteuse.
+6. Ajouter des points d'interet visibles depuis le chemin.
 
 ## Definition Du Premier Jalonnement
 

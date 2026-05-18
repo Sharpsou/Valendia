@@ -53,29 +53,28 @@ Manual path:
 - `verticesPerChunk`: 48 for medium-poly terrain, 64 if silhouettes need more detail.
 - `terrainMicroReliefStrength`: 0.12 for a safe ground-detail pass; keep below 0.25 unless the terrain is visually rechecked.
 - `groundTextureTiling`: 42 so the generated 128x128 ground detail repeats at meadow scale rather than across the full valley.
-- `treeCount`: 920 in the current DA validation scene, 350-650 depending on target hardware before forest batching.
+- `treeCount`: 920 in the current DA validation scene; tree meshes are baked after generation while trunk colliders stay separate.
 - `forestPocketCount`: 12 in the current DA validation scene to create additional forest masses away from the path.
-- `grassTuftCount`: 90000 in the current DA validation scene with shorter tufts; use 4000-8000 for lighter editor iteration until instancing/batching is added.
-- `heightScale`: 30 and `distantMountainStrength`: 0.12 in the current img2 recovery pass to keep the valley soft and avoid broken gullies.
+- `grassTuftCount`: 360000 in the current DA validation scene, split into material and spatial batches so the path-edge density now reads across the whole map.
+- `heightScale`: 30, `distantMountainStrength`: 0.12, `borderMountainWallStrength`: 0.18, and `distantSpireCount`: 64 keep the valley soft while closing the horizon with overlapping mountain accents and sealed corner massifs, without adding a continuous wall surface.
+- `borderVegetationClusterCount`: 144 keeps the mountain-scrub border from thinning out by adding clustered rocks, scrub, low trees, meadow strokes, and grass along all four edges.
+- Ground rendering uses `GroundBiomeAt` so the mountain-scrub logic no longer paints a hard dark circular terrain band.
+- Border trees use mixed valley/autumn/golden/scrub biomes with limited conifers, avoiding all-spruce edges.
+- Clouds are larger volumetric low-poly masses built from more puffs and multi-row banks; their positions use a stratified sky grid so the center does not randomly empty out. Visible clouds stay warm/unlit, and hidden `Cloud Shadow Caster` meshes use a lit material with `ShadowsOnly` so they can project real sunlight shadows.
+- Border mountains and generated rocks receive approximate `BoxCollider` components so the player cannot walk through them.
+- Trees receive trunk-level `CapsuleCollider` components so the player cannot walk through trunks while foliage remains non-blocking.
+- Existing generated scenes self-heal through `Ensure Generated Landscape Complete`, which adds missing mountain accents, fills sparse borders with scrub, rocks, low trees, and grass, then bakes eligible static renderers.
 - `flowerRibbonCount`: 32 in the current organic vegetation pass; violet/pink is an accent carried by grass/flowers, not a ground material.
-
-## Next Technical Step
-
-The current generator is intentionally editor-friendly and deterministic. The prototype scene builder now covers one-click scene setup, biomes, stylized trees, forest pockets, very dense short batched vegetation, removed ground-accent overlays, lower smooth ridge heights, taller solid double-sided canopies, clouds, and an iterated img2-first organic vegetation pass with a teal sky, warm low sun, stronger shadows, neutral green/olive terrain, and color accents carried by batched grass strokes instead of flat colored ground patches. The next pass should add:
-
-- persistent asset baking for generated meshes/materials,
-- GPU instancing or indirect rendering for vegetation if the batched meshes are still too heavy,
-- quality tuning after a real Play Mode pass with the user camera, especially checking whether the new ground normal/detail texture adds enough matter without noisy shimmer,
-- smoother biome transitions and authored points of interest along the path,
-- occlusion/LOD groups before increasing scene size.
 
 ## Current Performance Pass
 
 - Main grass tufts are merged into spatial mesh chunks instead of individual GameObjects.
 - Path-edge grass is merged into dedicated batches.
 - Organic meadow color accents are also rendered as batched grass strokes instead of flat ground overlays.
+- Decorative static meshes are baked by material and shadow mode after generation, reducing active renderers while preserving rocks, mountain, and tree trunk colliders.
+- Source renderers are stripped after baking, and empty generated hierarchy branches are pruned.
 - Grass receives shadows but no longer casts per-blade shadows.
-- Main light shadows use hard shadows, 180 distance, and 2 cascades for cheaper URP shadow rendering.
+- Main light shadows use hard shadows, 900 distance, and 4 cascades so overhead cloud shadow casters remain in range.
 
 ## Git Hygiene
 

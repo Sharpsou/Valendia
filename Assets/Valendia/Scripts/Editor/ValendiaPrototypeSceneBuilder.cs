@@ -78,6 +78,83 @@ namespace Valendia.Editor
             Debug.Log($"Valendia preview written to {PreviewPath}");
         }
 
+        [MenuItem("Valendia/Create Diagnostic Previews")]
+        public static void CreateDiagnosticPreviews()
+        {
+            CreatePrototypeScene();
+
+            Camera camera = Camera.main;
+            ValendiaLandscapeGenerator generator = Object.FindFirstObjectByType<ValendiaLandscapeGenerator>();
+            if (camera == null || generator == null)
+            {
+                Debug.LogWarning("Valendia diagnostic previews skipped: missing camera or generator.");
+                return;
+            }
+
+            string stamp = System.DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            RenderPreview(
+                camera,
+                generator.GetPathPoint(0.26f, 6.4f),
+                generator.GetPathPoint(0.72f, 7.2f) + new Vector3(22f, 0f, 0f),
+                $"Assets/Valendia/Docs/ValendiaPreview_path_{stamp}.png");
+            RenderPreview(
+                camera,
+                new Vector3(-WorldHalf(generator) * 0.72f, generator.SampleHeight(-WorldHalf(generator) * 0.72f, 0f) + 88f, -WorldHalf(generator) * 0.18f),
+                Vector3.zero + Vector3.up * 28f,
+                $"Assets/Valendia/Docs/ValendiaPreview_overview_{stamp}.png");
+            RenderPreview(
+                camera,
+                new Vector3(WorldHalf(generator) * 0.18f, generator.SampleHeight(WorldHalf(generator) * 0.18f, WorldHalf(generator) * 0.62f) + 34f, WorldHalf(generator) * 0.62f),
+                new Vector3(0f, 36f, 0f),
+                $"Assets/Valendia/Docs/ValendiaPreview_clouds_{stamp}.png");
+        }
+
+        private static float WorldHalf(ValendiaLandscapeGenerator generator)
+        {
+            const float sampleLimit = 2000f;
+            float max = 0f;
+            for (int i = 0; i <= 16; i++)
+            {
+                float x = Mathf.Lerp(-sampleLimit, sampleLimit, i / 16f);
+                if (Mathf.Abs(generator.SampleHeight(x, 0f)) < 10000f)
+                {
+                    max = Mathf.Max(max, Mathf.Abs(x));
+                }
+            }
+
+            return max > 0f ? 360f : 360f;
+        }
+
+        private static void RenderPreview(Camera camera, Vector3 position, Vector3 lookAt, string path)
+        {
+            camera.transform.position = position;
+            camera.transform.rotation = Quaternion.LookRotation(lookAt - position, Vector3.up);
+            camera.fieldOfView = 68f;
+            camera.farClipPlane = 1800f;
+
+            RenderTexture renderTexture = new RenderTexture(1280, 720, 24);
+            Texture2D texture = new Texture2D(1280, 720, TextureFormat.RGB24, false);
+            RenderTexture previous = RenderTexture.active;
+
+            camera.targetTexture = renderTexture;
+            RenderTexture.active = renderTexture;
+            camera.Render();
+            texture.ReadPixels(new Rect(0, 0, renderTexture.width, renderTexture.height), 0, 0);
+            texture.Apply();
+
+            camera.targetTexture = null;
+            RenderTexture.active = previous;
+
+            string absolutePath = Path.GetFullPath(path);
+            Directory.CreateDirectory(Path.GetDirectoryName(absolutePath));
+            File.WriteAllBytes(absolutePath, texture.EncodeToPNG());
+            Object.DestroyImmediate(renderTexture);
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path);
+            Debug.Log($"Valendia diagnostic preview written to {path}");
+        }
+
         private static ValendiaLandscapeGenerator CreateWorld()
         {
             GameObject world = new GameObject("Valendia World");
@@ -116,8 +193,9 @@ namespace Valendia.Editor
             light.shadowStrength = 0.58f;
             sun.transform.rotation = Quaternion.Euler(24f, -42f, 0f);
             RenderSettings.sun = light;
-            QualitySettings.shadowDistance = 180f;
-            QualitySettings.shadowCascades = 2;
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowDistance = 900f;
+            QualitySettings.shadowCascades = 4;
         }
 
         private static void CreatePlayer(ValendiaLandscapeGenerator generator)

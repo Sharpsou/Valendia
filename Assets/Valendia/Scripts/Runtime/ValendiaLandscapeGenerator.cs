@@ -29,25 +29,27 @@ namespace Valendia.Runtime
         [SerializeField, Min(2f)] private float pathWidth = 12f;
         [SerializeField, Min(0f)] private float pathVegetationClearance = 8f;
         [SerializeField, Range(0f, 1f)] private float distantMountainStrength = 0.12f;
+        [SerializeField, Range(0f, 0.35f)] private float borderMountainWallStrength = 0.18f;
 
         [Header("Vegetation")]
         [SerializeField, Min(0)] private int treeCount = 920;
         [SerializeField, Min(0)] private int authoredGroveCount = 14;
         [SerializeField, Min(0)] private int forestPocketCount = 12;
-        [SerializeField, Min(0)] private int meadowPatchCount = 1450;
+        [SerializeField, Min(0)] private int meadowPatchCount = 2400;
         [SerializeField, Min(0)] private int flowerRibbonCount = 32;
         [SerializeField, Min(0)] private int pathEdgePatchCount = 2400;
-        [SerializeField, Min(0)] private int grassTuftCount = 90000;
+        [SerializeField, Min(0)] private int grassTuftCount = 360000;
         [SerializeField, Min(0)] private int rockCount = 260;
         [SerializeField, Min(0)] private int flowerPatchCount = 680;
         [SerializeField, Min(0)] private int scrubCount = 300;
+        [SerializeField, Min(0)] private int borderVegetationClusterCount = 144;
         [SerializeField, Range(0f, 35f)] private float maxTreeSlope = 24f;
 
         [Header("Atmosphere")]
-        [SerializeField, Min(0)] private int cloudCount = 14;
-        [SerializeField, Min(0)] private int cloudBankCount = 7;
+        [SerializeField, Min(0)] private int cloudCount = 18;
+        [SerializeField, Min(0)] private int cloudBankCount = 8;
         [SerializeField, Min(0)] private int horizonCloudBankCount = 9;
-        [SerializeField, Min(0)] private int distantSpireCount = 8;
+        [SerializeField, Min(0)] private int distantSpireCount = 64;
 
         [Header("Runtime")]
         [SerializeField] private bool generateOnStart = true;
@@ -67,17 +69,23 @@ namespace Valendia.Runtime
         [SerializeField] private Material darkLeafMaterial;
         [SerializeField] private Material autumnLeafMaterial;
         [SerializeField] private Material grassMaterial;
+        [SerializeField] private Material oliveGrassMaterial;
+        [SerializeField] private Material goldenGrassBladeMaterial;
+        [SerializeField] private Material roseGrassMaterial;
         [SerializeField] private Material flowerMaterial;
         [SerializeField] private Material scrubMaterial;
         [SerializeField] private Material rockMaterial;
         [SerializeField] private Material cloudMaterial;
+        [SerializeField] private Material cloudShadowCasterMaterial;
 
         private const int GrassBatchGrid = 8;
+        private const int GrassPaletteVariants = 4;
         private const int MaxGrassBatchVertices = 60000;
         private const int MaxGrassTuftVertices = 160;
         private const int MaxMeadowBatchVertices = 60000;
         private const int MaxMeadowPatchVertices = 720;
         private const int GroundDetailTextureSize = 128;
+        private const int MaxCombinedRendererVertices = 240000;
 
         private Transform generatedRoot;
         private Transform meadowBatchRoot;
@@ -86,6 +94,57 @@ namespace Valendia.Runtime
         private MeadowBatchState lavenderMeadowBatch;
         private Texture2D groundDetailTexture;
         private Texture2D groundNormalTexture;
+
+        private readonly struct StaticBakeKey : IEquatable<StaticBakeKey>
+        {
+            public readonly Material Material;
+            public readonly UnityEngine.Rendering.ShadowCastingMode ShadowCastingMode;
+            public readonly bool ReceiveShadows;
+
+            public StaticBakeKey(Material material, UnityEngine.Rendering.ShadowCastingMode shadowCastingMode, bool receiveShadows)
+            {
+                Material = material;
+                ShadowCastingMode = shadowCastingMode;
+                ReceiveShadows = receiveShadows;
+            }
+
+            public bool Equals(StaticBakeKey other)
+            {
+                return Material == other.Material
+                    && ShadowCastingMode == other.ShadowCastingMode
+                    && ReceiveShadows == other.ReceiveShadows;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is StaticBakeKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = Material != null ? Material.GetInstanceID() : 0;
+                    hash = (hash * 397) ^ (int)ShadowCastingMode;
+                    hash = (hash * 397) ^ ReceiveShadows.GetHashCode();
+                    return hash;
+                }
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (Application.isPlaying)
+            {
+                return;
+            }
+
+            generatedRoot = transform.Find("Generated Valendia Landscape");
+            if (generatedRoot != null)
+            {
+                EnsureGeneratedLandscapeComplete();
+            }
+        }
 
         private sealed class MeadowBatchState
         {
@@ -124,6 +183,7 @@ namespace Valendia.Runtime
             {
                 EnsureMaterials();
                 ApplyAtmosphere();
+                EnsureGeneratedLandscapeComplete();
                 return;
             }
 
@@ -158,9 +218,11 @@ namespace Valendia.Runtime
             ScatterPathEdgeVegetation();
             FlushAllMeadowBatches();
             ScatterMountainScrub();
+            ScatterBorderVegetation();
             GenerateHorizonCloudBelt();
             GenerateCloudBanks();
             GenerateClouds();
+            OptimizeGeneratedRenderers();
         }
 
         [ContextMenu("Clear Generated Landscape")]
@@ -182,6 +244,37 @@ namespace Valendia.Runtime
             }
 
             generatedRoot = null;
+        }
+
+        [ContextMenu("Ensure Generated Landscape Complete")]
+        public void EnsureGeneratedLandscapeComplete()
+        {
+            if (generatedRoot == null)
+            {
+                generatedRoot = transform.Find("Generated Valendia Landscape");
+            }
+
+            if (generatedRoot == null)
+            {
+                return;
+            }
+
+            EnsureMaterials();
+
+            if (generatedRoot.Find("Encircling Limestone Mountains") == null)
+            {
+                GenerateDistantSpires();
+            }
+
+            if (generatedRoot.Find("Border Vegetation Fill") == null)
+            {
+                ScatterBorderVegetation();
+            }
+
+            if (generatedRoot.Find("Baked Static Renderers") == null)
+            {
+                OptimizeGeneratedRenderers();
+            }
         }
 
         public Vector3 GetPathPoint(float normalizedZ, float heightOffset = 0f)
@@ -225,7 +318,7 @@ namespace Valendia.Runtime
                             float worldX = originX + x / (float)quads * chunkSize;
                             float worldZ = originZ + z / (float)quads * chunkSize;
                             float height = HeightAt(worldX, worldZ);
-                            Biome biome = BiomeAt(worldX, worldZ);
+                            Biome biome = GroundBiomeAt(worldX, worldZ);
 
                             vertices[index] = new Vector3(worldX, height, worldZ);
                             uv[index] = new Vector2(worldX / WorldSize, worldZ / WorldSize);
@@ -240,7 +333,7 @@ namespace Valendia.Runtime
                             int i = z * verts + x;
                             float centerX = originX + (x + 0.5f) / quads * chunkSize;
                             float centerZ = originZ + (z + 0.5f) / quads * chunkSize;
-                            List<int> target = biomeTriangles[(int)BiomeAt(centerX, centerZ)];
+                            List<int> target = biomeTriangles[(int)GroundBiomeAt(centerX, centerZ)];
 
                             target.Add(i);
                             target.Add(i + verts);
@@ -359,27 +452,64 @@ namespace Valendia.Runtime
 
         private void GenerateDistantSpires()
         {
-            Transform parent = CreateContainer("Distant Limestone Massifs");
+            Transform parent = CreateContainer("Encircling Limestone Mountains");
             System.Random random = new System.Random(seed + 707);
-            float radius = WorldSize * 0.48f;
+            int mountainsPerSide = Mathf.Max(14, Mathf.CeilToInt(distantSpireCount / 4f), chunksPerAxis * 4);
+            float halfWorld = WorldSize * 0.5f;
+            float outerOffset = chunkSize * 0.18f;
+            float sideSpacing = WorldSize / mountainsPerSide;
 
-            for (int i = 0; i < distantSpireCount; i++)
+            for (int side = 0; side < 4; side++)
             {
-                float angle = Mathf.Lerp(-150f, 150f, (float)random.NextDouble()) * Mathf.Deg2Rad;
-                float distance = Mathf.Lerp(radius * 0.95f, radius * 1.22f, (float)random.NextDouble());
-                float x = Mathf.Sin(angle) * distance;
-                float z = Mathf.Cos(angle) * distance;
-                float baseHeight = HeightAt(x, z) - Mathf.Lerp(2f, 8f, (float)random.NextDouble());
-                float height = Mathf.Lerp(28f, 68f, (float)random.NextDouble());
-                float width = Mathf.Lerp(56f, 128f, (float)random.NextDouble());
+                for (int i = 0; i < mountainsPerSide; i++)
+                {
+                    float along = -halfWorld + sideSpacing * (i + 0.5f) + Mathf.Lerp(-sideSpacing * 0.22f, sideSpacing * 0.22f, (float)random.NextDouble());
+                    float outside = halfWorld + outerOffset + Mathf.Lerp(-chunkSize * 0.05f, chunkSize * 0.2f, (float)random.NextDouble());
+                    float x = side < 2 ? along : side == 2 ? -outside : outside;
+                    float z = side < 2 ? side == 0 ? -outside : outside : along;
+                    float ringBreakup = Mathf.PerlinNoise((x + seed * 0.13f) * 0.0035f, (z - seed * 0.17f) * 0.0035f);
+                    float baseHeight = HeightAt(x, z) - Mathf.Lerp(2f, 8f, (float)random.NextDouble());
+                    float height = Mathf.Lerp(42f, 102f, (float)random.NextDouble()) * Mathf.Lerp(0.86f, 1.18f, ringBreakup);
+                    float width = sideSpacing * Mathf.Lerp(1.85f, 2.35f, (float)random.NextDouble()) * Mathf.Lerp(0.95f, 1.15f, ringBreakup);
+                    float depth = chunkSize * Mathf.Lerp(0.32f, 0.52f, (float)random.NextDouble()) * Mathf.Lerp(0.88f, 1.14f, ringBreakup);
 
-                GameObject spire = CreateMeshObject(
-                    "Layered Limestone Massif",
-                    CreateLayeredMassifMesh(width, height, Mathf.Lerp(22f, 52f, (float)random.NextDouble()), random),
+                    GameObject spire = CreateMeshObject(
+                        "Layered Limestone Mountain",
+                        CreateLayeredMassifMesh(width, height, depth, random),
+                        rockMaterial,
+                        parent);
+                    spire.transform.position = new Vector3(x, baseHeight, z);
+                    float rotation = side < 2 ? 0f : 90f;
+                    spire.transform.rotation = Quaternion.Euler(0f, rotation + Mathf.Lerp(-7f, 7f, (float)random.NextDouble()), 0f);
+                    spire.isStatic = true;
+                    AddApproximateBoxCollider(
+                        spire,
+                        new Vector3(0f, height * 0.42f, 0f),
+                        new Vector3(width * 0.84f, height * 0.86f, depth * 0.88f));
+                }
+            }
+
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float x = corner < 2 ? -halfWorld - outerOffset * 0.72f : halfWorld + outerOffset * 0.72f;
+                float z = corner == 0 || corner == 2 ? -halfWorld - outerOffset * 0.72f : halfWorld + outerOffset * 0.72f;
+                float baseHeight = HeightAt(x, z) - Mathf.Lerp(3f, 9f, (float)random.NextDouble());
+                float height = Mathf.Lerp(64f, 122f, (float)random.NextDouble());
+                float width = sideSpacing * Mathf.Lerp(2.25f, 2.85f, (float)random.NextDouble());
+                float depth = chunkSize * Mathf.Lerp(0.46f, 0.7f, (float)random.NextDouble());
+
+                GameObject cornerMountain = CreateMeshObject(
+                    "Corner Limestone Mountain",
+                    CreateLayeredMassifMesh(width, height, depth, random),
                     rockMaterial,
                     parent);
-                spire.transform.position = new Vector3(x, baseHeight, z);
-                spire.transform.rotation = Quaternion.Euler(0f, Mathf.Lerp(0f, 360f, (float)random.NextDouble()), 0f);
+                cornerMountain.transform.position = new Vector3(x, baseHeight, z);
+                cornerMountain.transform.rotation = Quaternion.Euler(0f, 45f + corner * 90f + Mathf.Lerp(-8f, 8f, (float)random.NextDouble()), 0f);
+                cornerMountain.isStatic = true;
+                AddApproximateBoxCollider(
+                    cornerMountain,
+                    new Vector3(0f, height * 0.42f, 0f),
+                    new Vector3(width * 0.86f, height * 0.86f, depth * 0.9f));
             }
         }
 
@@ -515,13 +645,23 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Small Floating Clouds");
             System.Random random = new System.Random(seed + 808);
+            int columns = Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, cloudCount) * 1.35f));
+            int rows = Mathf.CeilToInt(cloudCount / (float)columns);
+            float xMin = -WorldSize * 0.62f;
+            float xMax = WorldSize * 0.62f;
+            float zMin = -WorldSize * 0.42f;
+            float zMax = WorldSize * 0.62f;
 
             for (int i = 0; i < cloudCount; i++)
             {
+                int column = i % columns;
+                int row = i / columns;
+                float xT = (column + 0.5f + Mathf.Lerp(-0.28f, 0.28f, (float)random.NextDouble())) / columns;
+                float zT = (row + 0.5f + Mathf.Lerp(-0.26f, 0.26f, (float)random.NextDouble())) / rows;
                 Vector3 position = new Vector3(
-                    Mathf.Lerp(-WorldSize * 0.62f, WorldSize * 0.62f, (float)random.NextDouble()),
-                    Mathf.Lerp(125f, 205f, (float)random.NextDouble()),
-                    Mathf.Lerp(-WorldSize * 0.36f, WorldSize * 0.62f, (float)random.NextDouble()));
+                    Mathf.Lerp(xMin, xMax, Mathf.Clamp01(xT)),
+                    Mathf.Lerp(128f, 190f, (float)random.NextDouble()),
+                    Mathf.Lerp(zMin, zMax, Mathf.Clamp01(zT)));
                 CreateCloud(parent, position, random);
             }
         }
@@ -530,13 +670,23 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Illustrative Cloud Banks");
             System.Random random = new System.Random(seed + 818);
+            int columns = Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, cloudBankCount) * 1.2f));
+            int rows = Mathf.CeilToInt(cloudBankCount / (float)columns);
+            float xMin = -WorldSize * 0.60f;
+            float xMax = WorldSize * 0.60f;
+            float zMin = -WorldSize * 0.36f;
+            float zMax = WorldSize * 0.56f;
 
             for (int i = 0; i < cloudBankCount; i++)
             {
+                int column = i % columns;
+                int row = i / columns;
+                float xT = (column + 0.5f + Mathf.Lerp(-0.22f, 0.22f, (float)random.NextDouble())) / columns;
+                float zT = (row + 0.5f + Mathf.Lerp(-0.24f, 0.24f, (float)random.NextDouble())) / rows;
                 Vector3 position = new Vector3(
-                    Mathf.Lerp(-WorldSize * 0.66f, WorldSize * 0.66f, (float)random.NextDouble()),
-                    Mathf.Lerp(92f, 150f, (float)random.NextDouble()),
-                    Mathf.Lerp(-WorldSize * 0.42f, WorldSize * 0.62f, (float)random.NextDouble()));
+                    Mathf.Lerp(xMin, xMax, Mathf.Clamp01(xT)),
+                    Mathf.Lerp(116f, 168f, (float)random.NextDouble()),
+                    Mathf.Lerp(zMin, zMax, Mathf.Clamp01(zT)));
                 CreateCloudBank(parent, position, random);
             }
         }
@@ -551,7 +701,7 @@ namespace Valendia.Runtime
                 float t = horizonCloudBankCount <= 1 ? 0.5f : i / (float)(horizonCloudBankCount - 1);
                 Vector3 position = new Vector3(
                     Mathf.Lerp(-WorldSize * 0.56f, WorldSize * 0.56f, t) + Mathf.Lerp(-18f, 18f, (float)random.NextDouble()),
-                    Mathf.Lerp(82f, 126f, (float)random.NextDouble()),
+                    Mathf.Lerp(112f, 152f, (float)random.NextDouble()),
                     Mathf.Lerp(WorldSize * 0.05f, WorldSize * 0.34f, (float)random.NextDouble()));
                 CreateCloudBank(parent, position, random);
             }
@@ -620,10 +770,9 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Grass Tuft Batches");
             System.Random random = new System.Random(seed + 303);
-            int chunkCount = GrassBatchGrid * GrassBatchGrid;
-            List<Vector3>[] batchVertices = new List<Vector3>[chunkCount];
-            List<int>[] batchTriangles = new List<int>[chunkCount];
-            int[] batchIndexes = new int[chunkCount];
+            List<Vector3>[] batchVertices = new List<Vector3>[GrassPaletteVariants];
+            List<int>[] batchTriangles = new List<int>[GrassPaletteVariants];
+            int[] batchIndexes = new int[GrassPaletteVariants];
 
             for (int i = 0; i < grassTuftCount; i++)
             {
@@ -634,38 +783,40 @@ namespace Valendia.Runtime
                 }
 
                 float fertility = Mathf.PerlinNoise((point.x - seed) * 0.028f, (point.z + seed) * 0.028f);
-                if (fertility < 0.04f || SlopeAt(point.x, point.z) > 25f)
+                if (fertility < 0.002f || SlopeAt(point.x, point.z) > 30f)
                 {
                     continue;
                 }
 
                 point.y = HeightAt(point.x, point.z);
-                int chunk = GrassChunkIndex(point);
-                batchVertices[chunk] ??= new List<Vector3>(MaxGrassBatchVertices);
-                batchTriangles[chunk] ??= new List<int>(MaxGrassBatchVertices);
+                int variant = GrassPaletteVariantAt(point.x, point.z, random);
+                batchVertices[variant] ??= new List<Vector3>(MaxGrassBatchVertices);
+                batchTriangles[variant] ??= new List<int>(MaxGrassBatchVertices);
                 AddGrassTuftToBatch(
                     parent,
-                    batchVertices[chunk],
-                    batchTriangles[chunk],
-                    ref batchIndexes[chunk],
-                    $"Grass Chunk {chunk:00}",
+                    batchVertices[variant],
+                    batchTriangles[variant],
+                    ref batchIndexes[variant],
+                    GrassBatchPrefix(variant),
+                    GrassMaterialForVariant(variant),
                     point,
                     random);
             }
 
-            for (int chunk = 0; chunk < chunkCount; chunk++)
+            for (int variant = 0; variant < GrassPaletteVariants; variant++)
             {
-                if (batchVertices[chunk] == null)
+                if (batchVertices[variant] == null)
                 {
                     continue;
                 }
 
                 FlushGrassBatch(
                     parent,
-                    batchVertices[chunk],
-                    batchTriangles[chunk],
-                    ref batchIndexes[chunk],
-                    $"Grass Chunk {chunk:00}");
+                    batchVertices[variant],
+                    batchTriangles[variant],
+                    ref batchIndexes[variant],
+                    GrassBatchPrefix(variant),
+                    GrassMaterialForVariant(variant));
             }
         }
 
@@ -706,9 +857,9 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Path Edge Meadow Detail");
             System.Random random = new System.Random(seed + 606);
-            List<Vector3> grassVertices = new List<Vector3>(MaxGrassBatchVertices);
-            List<int> grassTriangles = new List<int>(MaxGrassBatchVertices);
-            int grassBatchIndex = 0;
+            List<Vector3>[] grassVertices = new List<Vector3>[GrassPaletteVariants];
+            List<int>[] grassTriangles = new List<int>[GrassPaletteVariants];
+            int[] grassBatchIndexes = new int[GrassPaletteVariants];
 
             for (int i = 0; i < pathEdgePatchCount; i++)
             {
@@ -735,12 +886,16 @@ namespace Valendia.Runtime
                 {
                     Vector3 grassPoint = point + new Vector3(Mathf.Lerp(-2.2f, 2.2f, (float)random.NextDouble()), 0f, Mathf.Lerp(-2.2f, 2.2f, (float)random.NextDouble()));
                     grassPoint.y = HeightAt(grassPoint.x, grassPoint.z);
+                    int variant = GrassPaletteVariantAt(grassPoint.x, grassPoint.z, random);
+                    grassVertices[variant] ??= new List<Vector3>(MaxGrassBatchVertices);
+                    grassTriangles[variant] ??= new List<int>(MaxGrassBatchVertices);
                     AddGrassTuftToBatch(
                         parent,
-                        grassVertices,
-                        grassTriangles,
-                        ref grassBatchIndex,
-                        "Path Edge Grass Batch",
+                        grassVertices[variant],
+                        grassTriangles[variant],
+                        ref grassBatchIndexes[variant],
+                        $"Path Edge {GrassBatchPrefix(variant)}",
+                        GrassMaterialForVariant(variant),
                         grassPoint,
                         random);
                 }
@@ -753,7 +908,21 @@ namespace Valendia.Runtime
                 }
             }
 
-            FlushGrassBatch(parent, grassVertices, grassTriangles, ref grassBatchIndex, "Path Edge Grass Batch");
+            for (int variant = 0; variant < GrassPaletteVariants; variant++)
+            {
+                if (grassVertices[variant] == null)
+                {
+                    continue;
+                }
+
+                FlushGrassBatch(
+                    parent,
+                    grassVertices[variant],
+                    grassTriangles[variant],
+                    ref grassBatchIndexes[variant],
+                    $"Path Edge {GrassBatchPrefix(variant)}",
+                    GrassMaterialForVariant(variant));
+            }
         }
 
         private void ScatterMountainScrub()
@@ -780,6 +949,160 @@ namespace Valendia.Runtime
                 CreateScrub(parent, point, random);
                 placed++;
             }
+        }
+
+        private void ScatterBorderVegetation()
+        {
+            Transform parent = CreateContainer("Border Vegetation Fill");
+            System.Random random = new System.Random(seed + 515);
+            List<Vector3>[] grassVertices = new List<Vector3>[GrassPaletteVariants];
+            List<int>[] grassTriangles = new List<int>[GrassPaletteVariants];
+            int[] grassBatchIndexes = new int[GrassPaletteVariants];
+            int clustersPerSide = Mathf.Max(8, Mathf.CeilToInt(borderVegetationClusterCount / 4f));
+            float halfWorld = WorldSize * 0.5f;
+            float sideSpacing = WorldSize / clustersPerSide;
+
+            for (int side = 0; side < 4; side++)
+            {
+                for (int i = 0; i < clustersPerSide; i++)
+                {
+                    float along = -halfWorld + sideSpacing * (i + 0.5f) + Mathf.Lerp(-sideSpacing * 0.34f, sideSpacing * 0.34f, (float)random.NextDouble());
+                    float inset = Mathf.Lerp(chunkSize * 0.05f, chunkSize * 0.46f, (float)random.NextDouble());
+                    Vector3 center = BorderPoint(side, along, inset);
+                    center.y = HeightAt(center.x, center.z);
+
+                    int rocks = random.Next(4, 9);
+                    for (int rock = 0; rock < rocks; rock++)
+                    {
+                        Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.48f, chunkSize * 0.22f);
+                        point.y = HeightAt(point.x, point.z);
+                        if (SlopeAt(point.x, point.z) <= 32f)
+                        {
+                            CreateRock(parent, point, random);
+                        }
+                    }
+
+                    int scrub = random.Next(7, 14);
+                    for (int s = 0; s < scrub; s++)
+                    {
+                        Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.52f, chunkSize * 0.24f);
+                        point.y = HeightAt(point.x, point.z);
+                        if (SlopeAt(point.x, point.z) <= 34f)
+                        {
+                            CreateScrub(parent, point, random);
+                        }
+                    }
+
+                    int trees = random.Next(3, 7);
+                    for (int tree = 0; tree < trees; tree++)
+                    {
+                        Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.44f, chunkSize * 0.2f);
+                        if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance) || SlopeAt(point.x, point.z) > maxTreeSlope + 6f)
+                        {
+                            continue;
+                        }
+
+                        point.y = HeightAt(point.x, point.z);
+                        Biome treeBiome = BorderTreeBiome(random);
+                        float coniferChance = treeBiome == Biome.MountainScrub ? 0.38f : 0.12f;
+                        GameObject borderTree = CreateTree(parent, point, random, treeBiome, coniferChance);
+                        borderTree.transform.localScale *= Mathf.Lerp(0.78f, 1.05f, (float)random.NextDouble());
+                    }
+
+                    int grassTufts = random.Next(44, 84);
+                    for (int grass = 0; grass < grassTufts; grass++)
+                    {
+                        Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.58f, chunkSize * 0.30f);
+                        if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.5f) || SlopeAt(point.x, point.z) > 34f)
+                        {
+                            continue;
+                        }
+
+                        point.y = HeightAt(point.x, point.z);
+                        int variant = GrassPaletteVariantAt(point.x, point.z, random);
+                        grassVertices[variant] ??= new List<Vector3>(MaxGrassBatchVertices);
+                        grassTriangles[variant] ??= new List<int>(MaxGrassBatchVertices);
+                        AddGrassTuftToBatch(
+                            parent,
+                            grassVertices[variant],
+                            grassTriangles[variant],
+                            ref grassBatchIndexes[variant],
+                            $"Border {GrassBatchPrefix(variant)}",
+                            GrassMaterialForVariant(variant),
+                            point,
+                            random);
+                    }
+
+                    if (random.NextDouble() < 0.86)
+                    {
+                        Vector3 meadowPoint = center + BorderScatterOffset(side, random, sideSpacing * 0.32f, chunkSize * 0.18f);
+                        meadowPoint.y = HeightAt(meadowPoint.x, meadowPoint.z);
+                        CreateMeadowPatch(parent, meadowPoint, Biome.MountainScrub, random, Mathf.Lerp(0.85f, 1.35f, (float)random.NextDouble()));
+                    }
+                }
+            }
+
+            for (int variant = 0; variant < GrassPaletteVariants; variant++)
+            {
+                if (grassVertices[variant] == null)
+                {
+                    continue;
+                }
+
+                FlushGrassBatch(
+                    parent,
+                    grassVertices[variant],
+                    grassTriangles[variant],
+                    ref grassBatchIndexes[variant],
+                    $"Border {GrassBatchPrefix(variant)}",
+                    GrassMaterialForVariant(variant));
+            }
+        }
+
+        private Vector3 BorderPoint(int side, float along, float inset)
+        {
+            float halfWorld = WorldSize * 0.5f;
+            switch (side)
+            {
+                case 0:
+                    return new Vector3(along, 0f, -halfWorld + inset);
+                case 1:
+                    return new Vector3(along, 0f, halfWorld - inset);
+                case 2:
+                    return new Vector3(-halfWorld + inset, 0f, along);
+                default:
+                    return new Vector3(halfWorld - inset, 0f, along);
+            }
+        }
+
+        private static Vector3 BorderScatterOffset(int side, System.Random random, float alongRadius, float depthRadius)
+        {
+            float along = Mathf.Lerp(-alongRadius, alongRadius, (float)random.NextDouble());
+            float depth = Mathf.Lerp(-depthRadius, depthRadius, (float)random.NextDouble());
+            return side < 2
+                ? new Vector3(along, 0f, depth)
+                : new Vector3(depth, 0f, along);
+        }
+
+        private static Biome BorderTreeBiome(System.Random random)
+        {
+            double roll = random.NextDouble();
+            if (roll < 0.42)
+            {
+                return Biome.ValleyGrass;
+            }
+
+            if (roll < 0.68)
+            {
+                return Biome.AutumnGrove;
+            }
+
+            if (roll < 0.86)
+            {
+                return Biome.GoldenGrass;
+            }
+
+            return Biome.MountainScrub;
         }
 
         private void ScatterRocks()
@@ -818,12 +1141,15 @@ namespace Valendia.Runtime
             float mountainMask = Mathf.SmoothStep(0.64f, 1f, radial);
             float ridges = 1f - Mathf.Abs(2f * Mathf.PerlinNoise((x - seed) * 0.004f, (z + seed) * 0.004f) - 1f);
             float mountains = ridges * ridges * heightScale * 0.82f * mountainMask * distantMountainStrength;
+            float ringNoise = Mathf.PerlinNoise((x + seed * 0.23f) * 0.0032f, (z - seed * 0.37f) * 0.0032f);
+            float wallMask = Mathf.SmoothStep(0.76f, 1.03f, radial);
+            float mountainWall = Mathf.Lerp(0.72f, 1.18f, ringNoise) * heightScale * wallMask * borderMountainWallStrength;
 
             float pathCenter = PathCenterX(z);
             float pathDistance = Mathf.Abs(x - pathCenter);
             float pathBlend = 1f - Mathf.SmoothStep(pathWidth * 0.5f, pathWidth * 1.8f, pathDistance);
-            float baseHeight = rolling + mountains;
-            float pathHeight = rolling * 0.96f + mountains * 0.62f;
+            float baseHeight = rolling + mountains + mountainWall;
+            float pathHeight = rolling * 0.96f + mountains * 0.62f + mountainWall * 0.72f;
             float height = Mathf.Lerp(baseHeight, pathHeight, pathBlend * 0.36f);
 
             return height + GroundMicroReliefAt(x, z, pathDistance);
@@ -869,7 +1195,9 @@ namespace Valendia.Runtime
         private Biome BiomeAt(float x, float z)
         {
             float radial = new Vector2(x, z).magnitude / (WorldSize * 0.5f);
-            if (radial > 0.78f)
+            float edgeNoise = Mathf.PerlinNoise((x + seed * 0.29f) * 0.004f, (z - seed * 0.33f) * 0.004f);
+            float mountainScrubThreshold = Mathf.Lerp(0.88f, 0.96f, edgeNoise);
+            if (radial > mountainScrubThreshold)
             {
                 return Biome.MountainScrub;
             }
@@ -887,6 +1215,23 @@ namespace Valendia.Runtime
             }
 
             return field > 0.80f ? Biome.GoldenGrass : Biome.ValleyGrass;
+        }
+
+        private Biome GroundBiomeAt(float x, float z)
+        {
+            Biome biome = BiomeAt(x, z);
+            if (biome != Biome.MountainScrub)
+            {
+                return biome;
+            }
+
+            float field = Mathf.PerlinNoise((x + seed * 0.41f) * 0.006f, (z - seed * 0.49f) * 0.006f);
+            if (field < 0.18f)
+            {
+                return Biome.AutumnGrove;
+            }
+
+            return field > 0.74f ? Biome.GoldenGrass : Biome.ValleyGrass;
         }
 
         private static Color BiomeGroundColor(Biome biome)
@@ -940,7 +1285,7 @@ namespace Valendia.Runtime
             return container.transform;
         }
 
-        private GameObject CreateTree(Transform parent, Vector3 position, System.Random random, Biome biome)
+        private GameObject CreateTree(Transform parent, Vector3 position, System.Random random, Biome biome, float coniferChanceOverride = -1f)
         {
             GameObject tree = new GameObject("Stylized Faceted Tree");
             tree.transform.SetParent(parent, false);
@@ -959,9 +1304,13 @@ namespace Valendia.Runtime
                 Mathf.Lerp(-2f, 2f, (float)random.NextDouble()),
                 0f,
                 Mathf.Lerp(-3f, 3f, (float)random.NextDouble()));
+            AddTreeTrunkCollider(tree, trunkHeight);
 
             Material crownMaterial = LeafMaterialForBiome(biome, random);
-            bool conifer = biome == Biome.MountainScrub || random.NextDouble() < 0.06;
+            float coniferChance = coniferChanceOverride >= 0f
+                ? coniferChanceOverride
+                : biome == Biome.MountainScrub ? 0.72f : 0.06f;
+            bool conifer = random.NextDouble() < coniferChance;
             if (conifer)
             {
                 CreateConiferCanopy(tree.transform, crownMaterial, trunkHeight, random);
@@ -1146,18 +1495,74 @@ namespace Valendia.Runtime
             return z * GrassBatchGrid + x;
         }
 
+        private int GrassPaletteVariantAt(float x, float z, System.Random random)
+        {
+            float warm = Mathf.PerlinNoise((x + seed * 0.17f) * 0.009f, (z - seed * 0.23f) * 0.009f);
+            float accent = Mathf.PerlinNoise((x - seed * 0.31f) * 0.018f, (z + seed * 0.29f) * 0.018f);
+            float scatter = (float)random.NextDouble();
+            Biome biome = GroundBiomeAt(x, z);
+
+            if ((biome == Biome.LavenderField && accent > 0.54f) || (accent > 0.84f && scatter > 0.38f))
+            {
+                return 3;
+            }
+
+            if (biome == Biome.GoldenGrass || warm > 0.72f || (warm > 0.62f && scatter > 0.76f))
+            {
+                return 2;
+            }
+
+            if (biome == Biome.AutumnGrove || biome == Biome.MountainScrub || warm < 0.30f)
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        private Material GrassMaterialForVariant(int variant)
+        {
+            switch (variant)
+            {
+                case 1:
+                    return oliveGrassMaterial;
+                case 2:
+                    return goldenGrassBladeMaterial;
+                case 3:
+                    return roseGrassMaterial;
+                default:
+                    return grassMaterial;
+            }
+        }
+
+        private static string GrassBatchPrefix(int variant)
+        {
+            switch (variant)
+            {
+                case 1:
+                    return "Olive Grass Batch";
+                case 2:
+                    return "Golden Grass Batch";
+                case 3:
+                    return "Rose Grass Batch";
+                default:
+                    return "Fresh Grass Batch";
+            }
+        }
+
         private void AddGrassTuftToBatch(
             Transform parent,
             List<Vector3> vertices,
             List<int> triangles,
             ref int batchIndex,
             string objectPrefix,
+            Material material,
             Vector3 position,
             System.Random random)
         {
             if (vertices.Count > MaxGrassBatchVertices - MaxGrassTuftVertices)
             {
-                FlushGrassBatch(parent, vertices, triangles, ref batchIndex, objectPrefix);
+                FlushGrassBatch(parent, vertices, triangles, ref batchIndex, objectPrefix, material);
             }
 
             AddGrassTuftGeometry(vertices, triangles, position, random);
@@ -1168,7 +1573,8 @@ namespace Valendia.Runtime
             List<Vector3> vertices,
             List<int> triangles,
             ref int batchIndex,
-            string objectPrefix)
+            string objectPrefix,
+            Material material)
         {
             if (vertices.Count == 0)
             {
@@ -1182,7 +1588,7 @@ namespace Valendia.Runtime
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
 
-            GameObject batch = CreateMeshObject($"{objectPrefix} {batchIndex:00}", mesh, grassMaterial, parent);
+            GameObject batch = CreateMeshObject($"{objectPrefix} {batchIndex:00}", mesh, material, parent);
             batch.isStatic = true;
             ConfigureGrassRenderer(batch.GetComponent<MeshRenderer>());
 
@@ -1260,6 +1666,8 @@ namespace Valendia.Runtime
                 Mathf.Lerp(1.1f, 2.9f, (float)random.NextDouble()),
                 Mathf.Lerp(0.24f, 0.72f, (float)random.NextDouble()),
                 Mathf.Lerp(0.9f, 2.5f, (float)random.NextDouble()));
+            rock.isStatic = true;
+            AddApproximateBoxCollider(rock, new Vector3(0f, 0.02f, 0f), new Vector3(1.35f, 1.15f, 1.35f));
         }
 
         private void CreateBroadCanopy(Transform tree, Material crownMaterial, float trunkHeight, System.Random random)
@@ -1343,28 +1751,32 @@ namespace Valendia.Runtime
             cloud.transform.SetParent(parent, false);
             cloud.transform.position = position;
             cloud.transform.rotation = Quaternion.Euler(0f, Mathf.Lerp(0f, 360f, (float)random.NextDouble()), 0f);
-            cloud.transform.localScale = Vector3.one * Mathf.Lerp(8.5f, 17f, (float)random.NextDouble());
+            float cloudScale = Mathf.Lerp(12f, 20f, (float)random.NextDouble());
+            cloud.transform.localScale = Vector3.one * cloudScale;
 
-            int blobs = random.Next(5, 10);
+            int blobs = random.Next(12, 20);
             for (int i = 0; i < blobs; i++)
             {
+                float layer = i / (float)Mathf.Max(1, blobs - 1);
+                float verticalMass = Mathf.Sin(layer * Mathf.PI);
                 GameObject blob = CreateMeshObject(
                     "Cloud Puff",
-                    CreateFacetedBlobMesh(random, 0.12f),
+                    CreateFacetedBlobMesh(random, 0.10f),
                     cloudMaterial,
                     cloud.transform);
                 blob.transform.localPosition = new Vector3(
-                    Mathf.Lerp(-1.75f, 1.75f, (float)random.NextDouble()),
-                    Mathf.Lerp(-0.12f, 0.32f, (float)random.NextDouble()),
-                    Mathf.Lerp(-0.52f, 0.52f, (float)random.NextDouble()));
+                    Mathf.Lerp(-1.85f, 1.85f, (float)random.NextDouble()),
+                    Mathf.Lerp(-0.20f, 0.50f, (float)random.NextDouble()) + verticalMass * 0.28f,
+                    Mathf.Lerp(-0.86f, 0.86f, (float)random.NextDouble()));
                 blob.transform.localScale = new Vector3(
-                    Mathf.Lerp(0.9f, 1.85f, (float)random.NextDouble()),
-                    Mathf.Lerp(0.26f, 0.48f, (float)random.NextDouble()),
-                    Mathf.Lerp(0.52f, 1.12f, (float)random.NextDouble()));
+                    Mathf.Lerp(1.0f, 2.15f, (float)random.NextDouble()),
+                    Mathf.Lerp(0.42f, 0.86f, (float)random.NextDouble()),
+                    Mathf.Lerp(0.74f, 1.42f, (float)random.NextDouble()));
 
                 MeshRenderer renderer = blob.GetComponent<MeshRenderer>();
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 renderer.receiveShadows = false;
+                CreateCloudShadowCaster(blob);
             }
         }
 
@@ -1374,30 +1786,56 @@ namespace Valendia.Runtime
             bank.transform.SetParent(parent, false);
             bank.transform.position = position;
             bank.transform.rotation = Quaternion.Euler(0f, Mathf.Lerp(-12f, 12f, (float)random.NextDouble()), 0f);
-            bank.transform.localScale = Vector3.one * Mathf.Lerp(7f, 13f, (float)random.NextDouble());
+            float bankScale = Mathf.Lerp(8.5f, 14f, (float)random.NextDouble());
+            bank.transform.localScale = Vector3.one * bankScale;
 
-            int puffs = random.Next(6, 11);
+            int puffs = random.Next(12, 20);
             for (int i = 0; i < puffs; i++)
             {
                 float t = puffs <= 1 ? 0.5f : i / (float)(puffs - 1);
+                float row = i % 3 - 1f;
+                float crown = Mathf.Sin(t * Mathf.PI);
                 GameObject puff = CreateMeshObject(
                     "Cloud Bank Puff",
-                    CreateFacetedBlobMesh(random, 0.08f),
+                    CreateFacetedBlobMesh(random, 0.075f),
                     cloudMaterial,
                     bank.transform);
                 puff.transform.localPosition = new Vector3(
-                    Mathf.Lerp(-2.6f, 2.6f, t) + Mathf.Lerp(-0.55f, 0.55f, (float)random.NextDouble()),
-                    Mathf.Sin(t * Mathf.PI) * Mathf.Lerp(0.08f, 0.48f, (float)random.NextDouble()),
-                    Mathf.Lerp(-0.42f, 0.42f, (float)random.NextDouble()));
+                    Mathf.Lerp(-2.45f, 2.45f, t) + Mathf.Lerp(-0.70f, 0.70f, (float)random.NextDouble()),
+                    crown * Mathf.Lerp(0.20f, 0.72f, (float)random.NextDouble()) + Mathf.Lerp(-0.10f, 0.18f, (float)random.NextDouble()),
+                    row * Mathf.Lerp(0.38f, 0.68f, (float)random.NextDouble()) + Mathf.Lerp(-0.24f, 0.24f, (float)random.NextDouble()));
                 puff.transform.localScale = new Vector3(
-                    Mathf.Lerp(0.85f, 1.55f, (float)random.NextDouble()),
-                    Mathf.Lerp(0.24f, 0.55f, (float)random.NextDouble()),
-                    Mathf.Lerp(0.46f, 0.95f, (float)random.NextDouble()));
+                    Mathf.Lerp(1.0f, 1.85f, (float)random.NextDouble()),
+                    Mathf.Lerp(0.38f, 0.86f, (float)random.NextDouble()),
+                    Mathf.Lerp(0.70f, 1.28f, (float)random.NextDouble()));
 
                 MeshRenderer renderer = puff.GetComponent<MeshRenderer>();
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 renderer.receiveShadows = false;
+                CreateCloudShadowCaster(puff);
             }
+        }
+
+        private void CreateCloudShadowCaster(GameObject visibleCloudPart)
+        {
+            MeshFilter sourceFilter = visibleCloudPart.GetComponent<MeshFilter>();
+            if (sourceFilter == null || sourceFilter.sharedMesh == null)
+            {
+                return;
+            }
+
+            GameObject caster = CreateMeshObject(
+                "Cloud Shadow Caster",
+                sourceFilter.sharedMesh,
+                cloudShadowCasterMaterial,
+                visibleCloudPart.transform.parent);
+            caster.transform.localPosition = visibleCloudPart.transform.localPosition;
+            caster.transform.localRotation = visibleCloudPart.transform.localRotation;
+            caster.transform.localScale = visibleCloudPart.transform.localScale;
+            MeshRenderer renderer = caster.GetComponent<MeshRenderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+            renderer.receiveShadows = false;
+            caster.isStatic = true;
         }
 
         private static GameObject CreateMeshObject(string objectName, Mesh mesh, Material material, Transform parent)
@@ -1427,6 +1865,188 @@ namespace Valendia.Runtime
         {
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
             renderer.receiveShadows = false;
+        }
+
+        private void OptimizeGeneratedRenderers()
+        {
+            if (generatedRoot == null)
+            {
+                return;
+            }
+
+            MeshRenderer[] renderers = generatedRoot.GetComponentsInChildren<MeshRenderer>(true);
+            Dictionary<StaticBakeKey, List<MeshRenderer>> groups = new Dictionary<StaticBakeKey, List<MeshRenderer>>();
+
+            foreach (MeshRenderer renderer in renderers)
+            {
+                if (!CanBakeRenderer(renderer, out MeshFilter filter))
+                {
+                    continue;
+                }
+
+                StaticBakeKey key = new StaticBakeKey(renderer.sharedMaterial, renderer.shadowCastingMode, renderer.receiveShadows);
+                if (!groups.TryGetValue(key, out List<MeshRenderer> group))
+                {
+                    group = new List<MeshRenderer>(128);
+                    groups.Add(key, group);
+                }
+
+                group.Add(renderer);
+            }
+
+            if (groups.Count == 0)
+            {
+                return;
+            }
+
+            Transform bakeRoot = CreateContainer("Baked Static Renderers");
+            foreach (KeyValuePair<StaticBakeKey, List<MeshRenderer>> group in groups)
+            {
+                BakeRendererGroup(bakeRoot, group.Key, group.Value);
+            }
+
+            PruneEmptyGeneratedChildren(generatedRoot);
+        }
+
+        private bool CanBakeRenderer(MeshRenderer renderer, out MeshFilter filter)
+        {
+            filter = null;
+            if (renderer == null || renderer.sharedMaterial == null)
+            {
+                return false;
+            }
+
+            filter = renderer.GetComponent<MeshFilter>();
+            if (filter == null || filter.sharedMesh == null || filter.sharedMesh.vertexCount == 0)
+            {
+                return false;
+            }
+
+            GameObject gameObject = renderer.gameObject;
+            if (gameObject.GetComponent<MeshCollider>() != null)
+            {
+                return false;
+            }
+
+            string name = gameObject.name;
+            return !name.Contains("Grass Batch")
+                && !name.Contains("Meadow Stroke Batch")
+                && !name.Contains("Smooth Dust Path")
+                && !name.StartsWith("Terrain Chunk", StringComparison.Ordinal);
+        }
+
+        private void BakeRendererGroup(Transform bakeRoot, StaticBakeKey key, List<MeshRenderer> renderers)
+        {
+            List<CombineInstance> combine = new List<CombineInstance>(256);
+            int vertexCount = 0;
+            int batchIndex = 0;
+            Matrix4x4 rootMatrix = generatedRoot.worldToLocalMatrix;
+
+            foreach (MeshRenderer renderer in renderers)
+            {
+                MeshFilter filter = renderer.GetComponent<MeshFilter>();
+                int meshVertices = filter.sharedMesh.vertexCount;
+                if (combine.Count > 0 && vertexCount + meshVertices > MaxCombinedRendererVertices)
+                {
+                    FlushCombinedRendererBatch(bakeRoot, key, combine, batchIndex++);
+                    combine.Clear();
+                    vertexCount = 0;
+                }
+
+                combine.Add(new CombineInstance
+                {
+                    mesh = filter.sharedMesh,
+                    subMeshIndex = 0,
+                    transform = rootMatrix * renderer.transform.localToWorldMatrix
+                });
+                vertexCount += meshVertices;
+
+                StripBakedRenderer(renderer, filter);
+            }
+
+            FlushCombinedRendererBatch(bakeRoot, key, combine, batchIndex);
+        }
+
+        private void FlushCombinedRendererBatch(Transform bakeRoot, StaticBakeKey key, List<CombineInstance> combine, int batchIndex)
+        {
+            if (combine.Count == 0)
+            {
+                return;
+            }
+
+            Mesh mesh = new Mesh { name = $"{key.Material.name} baked mesh {batchIndex:00}" };
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+            mesh.CombineMeshes(combine.ToArray(), true, true, false);
+            mesh.RecalculateBounds();
+
+            GameObject batch = CreateMeshObject($"{key.Material.name} Baked Renderers {batchIndex:00}", mesh, key.Material, bakeRoot);
+            batch.isStatic = true;
+            MeshRenderer renderer = batch.GetComponent<MeshRenderer>();
+            renderer.shadowCastingMode = key.ShadowCastingMode;
+            renderer.receiveShadows = key.ReceiveShadows;
+        }
+
+        private static void StripBakedRenderer(MeshRenderer renderer, MeshFilter filter)
+        {
+            DestroyUnityObject(renderer);
+            DestroyUnityObject(filter);
+        }
+
+        private static void PruneEmptyGeneratedChildren(Transform parent)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = parent.GetChild(i);
+                PruneEmptyGeneratedChildren(child);
+
+                if (child.childCount == 0 && child.GetComponents<Component>().Length == 1)
+                {
+                    DestroyUnityObject(child.gameObject);
+                }
+            }
+        }
+
+        private static void DestroyUnityObject(UnityEngine.Object target)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(target);
+            }
+            else
+            {
+                DestroyImmediate(target);
+            }
+        }
+
+        private static void AddApproximateBoxCollider(GameObject gameObject, Vector3 center, Vector3 size)
+        {
+            BoxCollider collider = gameObject.GetComponent<BoxCollider>();
+            if (collider == null)
+            {
+                collider = gameObject.AddComponent<BoxCollider>();
+            }
+
+            collider.center = center;
+            collider.size = size;
+        }
+
+        private static void AddTreeTrunkCollider(GameObject tree, float trunkHeight)
+        {
+            CapsuleCollider collider = tree.GetComponent<CapsuleCollider>();
+            if (collider == null)
+            {
+                collider = tree.AddComponent<CapsuleCollider>();
+            }
+
+            collider.direction = 1;
+            collider.center = new Vector3(0f, trunkHeight * 0.48f, 0f);
+            collider.height = Mathf.Max(1.2f, trunkHeight * 0.96f);
+            collider.radius = 0.34f;
         }
 
         private static Mesh CreateTaperedCylinderMesh(float bottomRadius, float topRadius, float height, int sides, System.Random random)
@@ -1503,53 +2123,6 @@ namespace Valendia.Runtime
             }
 
             return CreateFlatMesh("Faceted cone", vertices, triangles);
-        }
-
-        private static Mesh CreateSpireMesh(float radius, float height, System.Random random)
-        {
-            int sides = 7;
-            List<Vector3> vertices = new List<Vector3>(sides * 2 + 2);
-            List<int> triangles = new List<int>(sides * 9);
-
-            for (int i = 0; i < sides; i++)
-            {
-                float angle = Mathf.PI * 2f * i / sides;
-                float bottom = radius * Mathf.Lerp(0.75f, 1.25f, (float)random.NextDouble());
-                float shoulder = radius * Mathf.Lerp(0.2f, 0.5f, (float)random.NextDouble());
-                vertices.Add(new Vector3(Mathf.Cos(angle) * bottom, 0f, Mathf.Sin(angle) * bottom));
-                vertices.Add(new Vector3(Mathf.Cos(angle) * shoulder, height * Mathf.Lerp(0.52f, 0.72f, (float)random.NextDouble()), Mathf.Sin(angle) * shoulder));
-            }
-
-            int top = vertices.Count;
-            vertices.Add(new Vector3(Mathf.Lerp(-radius * 0.12f, radius * 0.12f, (float)random.NextDouble()), height, Mathf.Lerp(-radius * 0.12f, radius * 0.12f, (float)random.NextDouble())));
-            int center = vertices.Count;
-            vertices.Add(Vector3.zero);
-
-            for (int i = 0; i < sides; i++)
-            {
-                int next = (i + 1) % sides;
-                int bottomA = i * 2;
-                int shoulderA = bottomA + 1;
-                int bottomB = next * 2;
-                int shoulderB = bottomB + 1;
-
-                triangles.Add(bottomA);
-                triangles.Add(shoulderA);
-                triangles.Add(bottomB);
-                triangles.Add(bottomB);
-                triangles.Add(shoulderA);
-                triangles.Add(shoulderB);
-
-                triangles.Add(shoulderA);
-                triangles.Add(top);
-                triangles.Add(shoulderB);
-
-                triangles.Add(center);
-                triangles.Add(bottomB);
-                triangles.Add(bottomA);
-            }
-
-            return CreateFlatMesh("Limestone spire mesh", vertices, triangles);
         }
 
         private static Mesh CreateLayeredMassifMesh(float width, float height, float depth, System.Random random)
@@ -1867,7 +2440,10 @@ namespace Valendia.Runtime
             if (trunkMaterial == null) trunkMaterial = CreateMaterial("Valendia Faceted Trunk", new Color(0.26f, 0.14f, 0.09f), 0.32f);
             if (leafMaterial == null) leafMaterial = CreateMaterial("Valendia Spring Leaf Crowns", new Color(0.20f, 0.49f, 0.25f), 0.28f);
             if (autumnLeafMaterial == null) autumnLeafMaterial = CreateMaterial("Valendia Autumn Leaf Crowns", new Color(0.63f, 0.38f, 0.18f), 0.28f);
-            if (grassMaterial == null) grassMaterial = CreateMaterial("Valendia Dense Grass Blades", new Color(0.20f, 0.48f, 0.28f), 0.2f);
+            if (grassMaterial == null) grassMaterial = CreateMaterial("Valendia Fresh Green Grass Blades", new Color(0.34f, 0.62f, 0.34f), 0.2f);
+            if (oliveGrassMaterial == null) oliveGrassMaterial = CreateMaterial("Valendia Olive Grass Blades", new Color(0.28f, 0.44f, 0.25f), 0.22f);
+            if (goldenGrassBladeMaterial == null) goldenGrassBladeMaterial = CreateMaterial("Valendia Golden Straw Grass Blades", new Color(0.72f, 0.60f, 0.25f), 0.18f);
+            if (roseGrassMaterial == null) roseGrassMaterial = CreateMaterial("Valendia Rose Heather Grass Blades", new Color(0.72f, 0.40f, 0.62f), 0.16f);
             if (flowerMaterial == null) flowerMaterial = CreateMaterial("Valendia Lavender Blossoms", new Color(0.92f, 0.36f, 0.72f), 0.12f);
             if (scrubMaterial == null) scrubMaterial = CreateMaterial("Valendia Mountain Scrub", new Color(0.29f, 0.39f, 0.25f), 0.24f);
             if (meadowMaterial == null) meadowMaterial = CreateMaterial("Valendia Meadow Brush", new Color(0.22f, 0.50f, 0.30f), 0.16f);
@@ -1876,7 +2452,8 @@ namespace Valendia.Runtime
             if (warmLeafMaterial == null) warmLeafMaterial = CreateMaterial("Valendia Warm Leaf Crowns", new Color(0.72f, 0.50f, 0.22f), 0.28f);
             if (darkLeafMaterial == null) darkLeafMaterial = CreateMaterial("Valendia Deep Green Crowns", new Color(0.12f, 0.27f, 0.12f), 0.3f);
             if (rockMaterial == null) rockMaterial = CreateMaterial("Valendia Warm Limestone", new Color(0.72f, 0.62f, 0.44f), 0.38f);
-            if (cloudMaterial == null) cloudMaterial = CreateUnlitMaterial("Valendia Soft Cloud", new Color(0.90f, 0.86f, 0.72f));
+            if (cloudMaterial == null) cloudMaterial = CreateUnlitMaterial("Valendia Soft Autumn Cloud", new Color(0.96f, 0.88f, 0.66f));
+            if (cloudShadowCasterMaterial == null) cloudShadowCasterMaterial = CreateMaterial("Valendia Cloud Shadow Caster", new Color(0.88f, 0.82f, 0.68f), 0f);
 
             EnsureGroundDetailTextures();
             ConfigureGroundDetailMaterial(groundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength);
@@ -1890,7 +2467,11 @@ namespace Valendia.Runtime
             ConfigureDoubleSidedMaterial(warmLeafMaterial);
             ConfigureDoubleSidedMaterial(darkLeafMaterial);
             ConfigureDoubleSidedMaterial(grassMaterial);
+            ConfigureDoubleSidedMaterial(oliveGrassMaterial);
+            ConfigureDoubleSidedMaterial(goldenGrassBladeMaterial);
+            ConfigureDoubleSidedMaterial(roseGrassMaterial);
             ConfigureDoubleSidedMaterial(flowerMaterial);
+            ConfigureDoubleSidedMaterial(rockMaterial);
         }
 
         private void EnsureGroundDetailTextures()
@@ -2038,8 +2619,9 @@ namespace Valendia.Runtime
             sun.shadowStrength = 0.58f;
             sun.transform.rotation = Quaternion.Euler(24f, -42f, 0f);
             RenderSettings.sun = sun;
-            QualitySettings.shadowDistance = 180f;
-            QualitySettings.shadowCascades = 2;
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowDistance = 900f;
+            QualitySettings.shadowCascades = 4;
 
             DynamicGI.UpdateEnvironment();
         }
@@ -2127,24 +2709,6 @@ namespace Valendia.Runtime
             if (material.HasProperty("_Cull")) material.SetFloat("_Cull", 0f);
             if (material.HasProperty("_CullMode")) material.SetFloat("_CullMode", 0f);
             if (material.HasProperty("_DoubleSidedEnable")) material.SetFloat("_DoubleSidedEnable", 1f);
-        }
-
-        private static void RemoveCollider(GameObject gameObject)
-        {
-            Collider collider = gameObject.GetComponent<Collider>();
-            if (collider == null)
-            {
-                return;
-            }
-
-            if (Application.isPlaying)
-            {
-                Destroy(collider);
-            }
-            else
-            {
-                DestroyImmediate(collider);
-            }
         }
 
         private enum Biome
