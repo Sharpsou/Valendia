@@ -30,3 +30,4 @@ The project uses Unity input handling mode `Both`, with Input System support and
 
 - Project tracking: `Assets/Valendia/Docs/Suivi_Projet_Valendia.md`
 - Procedural landscape plan: `Assets/Valendia/Docs/Valendia_Procedural_Landscape_Plan.md`
+- Runtime architecture: `Assets/Valendia/Docs/Architecture_Runtime.md`

@@ -47,8 +47,10 @@ Skills installes via `skills.sh` dans `.agents/skills` :
 Fichiers ajoutes :
 
 - `Assets/Valendia/Scripts/Runtime/ValendiaLandscapeGenerator.cs`
+- `Assets/Valendia/Scripts/Runtime/ValendiaLandscapeGenerator.*.cs`
 - `Assets/Valendia/Scripts/Runtime/ValendiaFirstPersonController.cs`
 - `Assets/Valendia/Scripts/Editor/ValendiaPrototypeSceneBuilder.cs`
+- `Assets/Valendia/Docs/Architecture_Runtime.md`
 - `Assets/Valendia/ValendiaPrototype.unity`
 - `Assets/Valendia/Docs/Valendia_Procedural_Landscape_Plan.md`
 - `Assets/Valendia/Docs/Suivi_Projet_Valendia.md`
