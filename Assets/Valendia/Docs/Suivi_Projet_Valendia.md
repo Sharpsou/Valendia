@@ -67,7 +67,7 @@ Fonctions presentes :
 - textures/normal maps procedurales legeres appliquees aux materiaux de sol pour casser l'effet trop lisse sans ajouter de GameObjects ;
 - montagnes renforcees en peripherie ;
 - chemin sinueux aplani ;
-- sous-mesh distinct pour sol et chemin ;
+- ruban de chemin separe du terrain ;
 - sous-meshs de terrain distincts pour prairie, bosquet d'automne, herbes dorees, champ lavande et scrub de montagne ;
 - dispersion de rochers, arbres, touffes d'herbe, fleurs lavande et scrub ;
 - arbres remplaces par des meshes facettes generes par code : troncs polygonaux, couronnes en lobes et variantes coniferes ;
@@ -101,7 +101,7 @@ Prototype premiere personne :
 - mouvement clavier/souris en fallback ;
 - support manette via le nouveau Input System installe explicitement (`com.unity.inputsystem`) et projet regle en mode `Both` ;
 - fallback legacy conserve pour les axes Input Manager si une manette n'est exposee que par l'ancien backend ;
-- detection manette plus robuste : lecture de `Gamepad.current` ou du premier `Gamepad.all`, fallback `Joystick` pour les HID generiques, plus log des devices detectes au demarrage Play Mode ;
+- detection manette plus robuste : lecture de `Gamepad.current` ou du premier `Gamepad.all`, fallback `Joystick` pour les HID generiques, avec log des devices disponible mais desactive par defaut ;
 - stick gauche : deplacement ;
 - stick droit : camera ;
 - bouton sud : saut ;

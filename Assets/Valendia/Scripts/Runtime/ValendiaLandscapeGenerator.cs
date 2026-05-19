@@ -128,7 +128,7 @@ namespace Valendia.Runtime
             {
                 unchecked
                 {
-                    int hash = Material != null ? Material.GetInstanceID() : 0;
+                    int hash = Material != null ? System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Material) : 0;
                     hash = (hash * 397) ^ (int)ShadowCastingMode;
                     hash = (hash * 397) ^ ReceiveShadows.GetHashCode();
                     return hash;
@@ -170,6 +170,7 @@ namespace Valendia.Runtime
 
         private float WorldSize => chunksPerAxis * chunkSize;
         private Vector2 WorldMin => new Vector2(-WorldSize * 0.5f, -WorldSize * 0.5f);
+        public float WorldHalfSize => WorldSize * 0.5f;
         private bool IsPlayableOptimized => qualityProfile == GenerationQualityProfile.PlayableOptimized;
         private int EffectiveGrassTuftCount => IsPlayableOptimized ? Mathf.RoundToInt(grassTuftCount * 0.90f) : grassTuftCount;
         private int EffectiveMeadowPatchCount => meadowPatchCount;
@@ -317,8 +318,6 @@ namespace Valendia.Runtime
                     Vector2[] uv = new Vector2[vertices.Length];
                     Color[] colors = new Color[vertices.Length];
                     List<int>[] biomeTriangles = CreateBiomeTriangleLists(quads);
-                    List<int> pathTriangles = new List<int>(quads * quads);
-
                     for (int z = 0; z < verts; z++)
                     {
                         for (int x = 0; x < verts; x++)
@@ -357,13 +356,12 @@ namespace Valendia.Runtime
                     mesh.vertices = vertices;
                     mesh.uv = uv;
                     mesh.colors = colors;
-                    mesh.subMeshCount = biomeTriangles.Length + 1;
+                    mesh.subMeshCount = biomeTriangles.Length;
                     for (int i = 0; i < biomeTriangles.Length; i++)
                     {
                         mesh.SetTriangles(biomeTriangles[i], i);
                     }
 
-                    mesh.SetTriangles(pathTriangles, biomeTriangles.Length);
                     mesh.RecalculateNormals();
                     mesh.RecalculateTangents();
                     mesh.RecalculateBounds();
@@ -383,8 +381,7 @@ namespace Valendia.Runtime
                         autumnGroundMaterial,
                         goldenGrassGroundMaterial,
                         lavenderGroundMaterial,
-                        scrubGroundMaterial,
-                        pathMaterial
+                        scrubGroundMaterial
                     };
                 }
             }

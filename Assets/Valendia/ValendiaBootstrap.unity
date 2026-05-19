@@ -268,7 +268,7 @@ MonoBehaviour:
   gamepadLookDeadZone: 0.12
   maxPitch: 82
   lockCursorOnPlay: 1
-  logInputDevicesOnStart: 1
+  logInputDevicesOnStart: 0
 --- !u!143 &549944181
 CharacterController:
   m_ObjectHideFlags: 0

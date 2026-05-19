@@ -26,7 +26,7 @@ namespace Valendia.Runtime
         [SerializeField, Range(0f, 0.5f)] private float gamepadLookDeadZone = 0.12f;
         [SerializeField, Range(30f, 89f)] private float maxPitch = 82f;
         [SerializeField] private bool lockCursorOnPlay = true;
-        [SerializeField] private bool logInputDevicesOnStart = true;
+        [SerializeField] private bool logInputDevicesOnStart;
 
         private CharacterController character;
         private Vector3 horizontalVelocity;

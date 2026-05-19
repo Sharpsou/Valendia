@@ -74,7 +74,7 @@ namespace Valendia.Editor
                 return;
             }
 
-            ValendiaLandscapeGenerator generator = Object.FindFirstObjectByType<ValendiaLandscapeGenerator>();
+            ValendiaLandscapeGenerator generator = Object.FindAnyObjectByType<ValendiaLandscapeGenerator>();
             if (generator != null)
             {
                 Vector3 cameraPoint = generator.GetPathPoint(0.26f, 6.4f);
@@ -120,7 +120,7 @@ namespace Valendia.Editor
             CreatePrototypeScene();
 
             Camera camera = Camera.main;
-            ValendiaLandscapeGenerator generator = Object.FindFirstObjectByType<ValendiaLandscapeGenerator>();
+            ValendiaLandscapeGenerator generator = Object.FindAnyObjectByType<ValendiaLandscapeGenerator>();
             if (camera == null || generator == null)
             {
                 Debug.LogWarning("Valendia diagnostic previews skipped: missing camera or generator.");
@@ -156,11 +156,11 @@ namespace Valendia.Editor
             generator.Generate();
             stopwatch.Stop();
 
-            int rendererCount = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None).Length;
-            int lodGroupCount = Object.FindObjectsByType<LODGroup>(FindObjectsSortMode.None).Length;
-            int meshColliderCount = Object.FindObjectsByType<MeshCollider>(FindObjectsSortMode.None).Length;
-            int boxColliderCount = Object.FindObjectsByType<BoxCollider>(FindObjectsSortMode.None).Length;
-            int capsuleColliderCount = Object.FindObjectsByType<CapsuleCollider>(FindObjectsSortMode.None).Length;
+            int rendererCount = Object.FindObjectsByType<MeshRenderer>().Length;
+            int lodGroupCount = Object.FindObjectsByType<LODGroup>().Length;
+            int meshColliderCount = Object.FindObjectsByType<MeshCollider>().Length;
+            int boxColliderCount = Object.FindObjectsByType<BoxCollider>().Length;
+            int capsuleColliderCount = Object.FindObjectsByType<CapsuleCollider>().Length;
 
             Debug.Log(
                 $"Valendia generation benchmark: {stopwatch.Elapsed.TotalSeconds:0.00}s, " +
@@ -170,18 +170,7 @@ namespace Valendia.Editor
 
         private static float WorldHalf(ValendiaLandscapeGenerator generator)
         {
-            const float sampleLimit = 2000f;
-            float max = 0f;
-            for (int i = 0; i <= 16; i++)
-            {
-                float x = Mathf.Lerp(-sampleLimit, sampleLimit, i / 16f);
-                if (Mathf.Abs(generator.SampleHeight(x, 0f)) < 10000f)
-                {
-                    max = Mathf.Max(max, Mathf.Abs(x));
-                }
-            }
-
-            return max > 0f ? 360f : 360f;
+            return generator.WorldHalfSize;
         }
 
         private static void RenderPreview(Camera camera, Vector3 position, Vector3 lookAt, string path)
