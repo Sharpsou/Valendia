@@ -12,9 +12,18 @@ namespace Valendia.Editor
     {
         private const string ScenePath = "Assets/Valendia/ValendiaPrototype.unity";
         private const string BootstrapScenePath = "Assets/Valendia/ValendiaBootstrap.unity";
+        private const string GeneratedBuildScenePath = "Assets/Valendia/Generated/ValendiaBootstrapBuild.unity";
         private const string PreviewPath = "Assets/Valendia/Docs/ValendiaPrototypePreview.png";
         private const string WindowsBuildPath = "Builds/Windows/Valendia.exe";
         private const string MaterialFolder = "Assets/Valendia/Materials";
+        private static readonly string[] AuthoredTreePrefabPaths =
+        {
+            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_broad_01.fbx",
+            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_tall_01.fbx",
+            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_core_01.fbx",
+            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_low_01.fbx",
+            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_slim_01.fbx"
+        };
 
         [MenuItem("Valendia/Create Prototype Scene")]
         public static void CreatePrototypeScene()
@@ -40,13 +49,14 @@ namespace Valendia.Editor
         public static void BuildWindowsPlayer()
         {
             CreateBootstrapSceneAsset();
+            string buildScenePath = CreateGeneratedBuildSceneAsset();
 
             string absoluteBuildPath = Path.GetFullPath(WindowsBuildPath);
             Directory.CreateDirectory(Path.GetDirectoryName(absoluteBuildPath));
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { BootstrapScenePath },
+                scenes = new[] { buildScenePath },
                 locationPathName = WindowsBuildPath,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None
@@ -207,15 +217,33 @@ namespace Valendia.Editor
         {
             GameObject world = new GameObject("Valendia World");
             ValendiaLandscapeGenerator generator = world.AddComponent<ValendiaLandscapeGenerator>();
+            AssignAuthoredTreePrefabs(generator);
             generator.Generate();
             return generator;
         }
 
         private static ValendiaLandscapeGenerator CreateBootstrapWorld()
         {
+            return CreateBootstrapWorld(false);
+        }
+
+        private static ValendiaLandscapeGenerator CreateBootstrapWorld(bool generateLandscape)
+        {
             GameObject world = new GameObject("Valendia World");
             ValendiaLandscapeGenerator generator = world.AddComponent<ValendiaLandscapeGenerator>();
             AssignRuntimeMaterials(generator);
+            AssignAuthoredTreePrefabs(generator);
+
+            if (generateLandscape)
+            {
+                generator.Generate();
+                SetGenerateOnStart(generator, false);
+            }
+            else
+            {
+                SetGenerateOnStart(generator, true);
+            }
+
             return generator;
         }
 
@@ -233,6 +261,21 @@ namespace Valendia.Editor
             EditorGUIUtility.PingObject(generator.gameObject);
             Debug.Log($"Valendia bootstrap scene written to {BootstrapScenePath}");
             return generator;
+        }
+
+        private static string CreateGeneratedBuildSceneAsset()
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(GeneratedBuildScenePath)));
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            ValendiaLandscapeGenerator generator = CreateBootstrapWorld(true);
+            CreateLighting();
+            CreatePlayer(generator);
+
+            EditorSceneManager.SaveScene(scene, GeneratedBuildScenePath);
+            AssetDatabase.ImportAsset(GeneratedBuildScenePath);
+            Debug.Log($"Valendia generated build scene written to {GeneratedBuildScenePath}");
+            return GeneratedBuildScenePath;
         }
 
         private static void AssignRuntimeMaterials(ValendiaLandscapeGenerator generator)
@@ -278,6 +321,35 @@ namespace Valendia.Editor
         private static void SetMaterial(SerializedObject serializedObject, string propertyName, Material material)
         {
             serializedObject.FindProperty(propertyName).objectReferenceValue = material;
+        }
+
+        private static void AssignAuthoredTreePrefabs(ValendiaLandscapeGenerator generator)
+        {
+            SerializedObject serializedGenerator = new SerializedObject(generator);
+            SerializedProperty prefabs = serializedGenerator.FindProperty("authoredTreePrefabs");
+            prefabs.arraySize = AuthoredTreePrefabPaths.Length;
+
+            for (int i = 0; i < AuthoredTreePrefabPaths.Length; i++)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AuthoredTreePrefabPaths[i]);
+                if (prefab == null)
+                {
+                    throw new System.InvalidOperationException($"Missing authored tree prefab: {AuthoredTreePrefabPaths[i]}");
+                }
+
+                prefabs.GetArrayElementAtIndex(i).objectReferenceValue = prefab;
+            }
+
+            serializedGenerator.FindProperty("generateAuthoredTreePrefabs").boolValue = true;
+            serializedGenerator.FindProperty("generateLegacyProceduralTrees").boolValue = false;
+            serializedGenerator.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void SetGenerateOnStart(ValendiaLandscapeGenerator generator, bool generateOnStart)
+        {
+            SerializedObject serializedGenerator = new SerializedObject(generator);
+            serializedGenerator.FindProperty("generateOnStart").boolValue = generateOnStart;
+            serializedGenerator.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private static Material EnsureLitMaterial(string materialName, Color color, float smoothness, bool doubleSided)

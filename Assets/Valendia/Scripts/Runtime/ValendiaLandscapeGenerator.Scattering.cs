@@ -6,8 +6,81 @@ namespace Valendia.Runtime
 {
     public sealed partial class ValendiaLandscapeGenerator
     {
+        private void ScatterAuthoredTreePrefabs()
+        {
+            if (!generateAuthoredTreePrefabs || authoredTreePrefabCount <= 0 || authoredTreePrefabs == null || authoredTreePrefabs.Length == 0)
+            {
+                return;
+            }
+
+            Transform parent = CreateContainer("Authored Blender Trees");
+            System.Random random = new System.Random(seed + 1917);
+            int placed = 0;
+            int attempts = authoredTreePrefabCount * 10;
+
+            for (int i = 0; i < attempts && placed < authoredTreePrefabCount; i++)
+            {
+                Vector3 point = RandomPoint(random);
+                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance))
+                {
+                    continue;
+                }
+
+                float slope = SlopeAt(point.x, point.z);
+                float fertility = Mathf.PerlinNoise((point.x + seed * 0.83f) * 0.011f, (point.z - seed * 0.71f) * 0.011f);
+                if (slope > maxTreeSlope || fertility < 0.36f)
+                {
+                    continue;
+                }
+
+                GameObject prefab = authoredTreePrefabs[random.Next(authoredTreePrefabs.Length)];
+                if (prefab == null)
+                {
+                    continue;
+                }
+
+                point.y = HeightAt(point.x, point.z);
+                GameObject tree = Instantiate(prefab, point, Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
+                tree.name = prefab.name;
+                float scale = Mathf.Lerp(1.37f, 2.16f, (float)random.NextDouble());
+                tree.transform.localScale = Vector3.one * scale;
+                tree.isStatic = true;
+                ConfigureAuthoredTreeInstance(tree);
+                placed++;
+            }
+        }
+
+        private static void ConfigureAuthoredTreeInstance(GameObject tree)
+        {
+            foreach (Transform child in tree.GetComponentsInChildren<Transform>(true))
+            {
+                child.gameObject.isStatic = true;
+            }
+
+            foreach (MeshRenderer renderer in tree.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                renderer.receiveShadows = true;
+            }
+
+            CapsuleCollider collider = tree.GetComponent<CapsuleCollider>();
+            if (collider == null)
+            {
+                collider = tree.AddComponent<CapsuleCollider>();
+            }
+
+            collider.center = new Vector3(0f, 1.15f, 0f);
+            collider.radius = 0.32f;
+            collider.height = 2.3f;
+        }
+
         private void ScatterTrees()
         {
+            if (!generateLegacyProceduralTrees)
+            {
+                return;
+            }
+
             Transform parent = CreateContainer("Trees");
             System.Random random = new System.Random(seed + 101);
             int placed = 0;
@@ -295,7 +368,7 @@ namespace Valendia.Runtime
                         }
                     }
 
-                    int trees = random.Next(3, 7);
+                    int trees = generateLegacyProceduralTrees ? random.Next(3, 7) : 0;
                     for (int tree = 0; tree < trees; tree++)
                     {
                         Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.44f, chunkSize * 0.2f);
