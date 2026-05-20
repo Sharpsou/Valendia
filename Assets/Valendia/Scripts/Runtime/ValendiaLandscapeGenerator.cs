@@ -89,7 +89,6 @@ namespace Valendia.Runtime
         private const int MaxGrassTuftVertices = 160;
         private const int MaxMeadowBatchVertices = 60000;
         private const int MaxMeadowPatchVertices = 720;
-        private const int GroundDetailTextureSize = 128;
         private const int MaxCombinedRendererVertices = 900000;
         private const float GrassLod0ScreenHeight = 0.095f;
         private const float GrassLod1ScreenHeight = 0.046f;

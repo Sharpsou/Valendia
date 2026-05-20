@@ -55,127 +55,54 @@ namespace Valendia.Runtime
 
         private void EnsureGroundDetailTextures()
         {
+            groundDetailTexture ??= FindGroundTexture("_MainTex") ?? FindGroundTexture("_BaseMap");
+            groundNormalTexture ??= FindGroundTexture("_BumpMap");
+
             if (groundDetailTexture == null)
             {
-                groundDetailTexture = CreateGroundDetailTexture(
+                groundDetailTexture = ValendiaGroundTextureFactory.CreateDetailTexture(
+                    seed,
+                    groundTextureStrength,
                     "Valendia Organic Ground Detail",
                     new Color(0.86f, 0.92f, 0.78f),
                     new Color(1f, 1f, 0.93f),
-                    0f);
+                    0f,
+                    true);
             }
 
             if (groundNormalTexture == null)
             {
-                groundNormalTexture = CreateGroundNormalTexture("Valendia Organic Ground Normal", 0f, 1.45f);
+                groundNormalTexture = ValendiaGroundTextureFactory.CreateNormalTexture(
+                    seed,
+                    "Valendia Organic Ground Normal",
+                    0f,
+                    ValendiaGroundTextureFactory.NormalContrast,
+                    true);
             }
         }
 
-        private Texture2D CreateGroundDetailTexture(string textureName, Color shadowTint, Color lightTint, float offset)
+        private Texture2D FindGroundTexture(string propertyName)
         {
-            Texture2D texture = new Texture2D(GroundDetailTextureSize, GroundDetailTextureSize, TextureFormat.RGBA32, true)
-            {
-                name = textureName,
-                wrapMode = TextureWrapMode.Repeat,
-                filterMode = FilterMode.Bilinear
-            };
+            return GetMaterialTexture(groundMaterial, propertyName)
+                ?? GetMaterialTexture(autumnGroundMaterial, propertyName)
+                ?? GetMaterialTexture(goldenGrassGroundMaterial, propertyName)
+                ?? GetMaterialTexture(lavenderGroundMaterial, propertyName)
+                ?? GetMaterialTexture(scrubGroundMaterial, propertyName);
+        }
 
-            for (int y = 0; y < GroundDetailTextureSize; y++)
+        private static Texture2D GetMaterialTexture(Material material, string propertyName)
+        {
+            if (material == null || !material.HasProperty(propertyName))
             {
-                for (int x = 0; x < GroundDetailTextureSize; x++)
-                {
-                    float u = x / (float)GroundDetailTextureSize;
-                    float v = y / (float)GroundDetailTextureSize;
-                    float detail = GroundDetailTextureNoise(u, v, offset);
-                    float fleck = Mathf.PerlinNoise(u * 57.3f + seed * 0.002f + offset, v * 61.1f - seed * 0.003f);
-                    float mixed = Mathf.Clamp01(0.5f + (detail - 0.5f) * groundTextureStrength + (fleck - 0.5f) * groundTextureStrength * 0.24f);
-                    Color color = Color.Lerp(shadowTint, lightTint, mixed);
-                    color.a = 1f;
-                    texture.SetPixel(x, y, color);
-                }
+                return null;
             }
 
-            texture.Apply(true, true);
-            return texture;
-        }
-
-        private Texture2D CreateGroundNormalTexture(string textureName, float offset, float normalContrast)
-        {
-            Texture2D texture = new Texture2D(GroundDetailTextureSize, GroundDetailTextureSize, TextureFormat.RGBA32, true, true)
-            {
-                name = textureName,
-                wrapMode = TextureWrapMode.Repeat,
-                filterMode = FilterMode.Bilinear
-            };
-
-            float step = 1f / GroundDetailTextureSize;
-            for (int y = 0; y < GroundDetailTextureSize; y++)
-            {
-                for (int x = 0; x < GroundDetailTextureSize; x++)
-                {
-                    float u = x / (float)GroundDetailTextureSize;
-                    float v = y / (float)GroundDetailTextureSize;
-                    float left = GroundDetailTextureNoise(Wrap01(u - step), v, offset);
-                    float right = GroundDetailTextureNoise(Wrap01(u + step), v, offset);
-                    float down = GroundDetailTextureNoise(u, Wrap01(v - step), offset);
-                    float up = GroundDetailTextureNoise(u, Wrap01(v + step), offset);
-                    Vector3 normal = new Vector3((left - right) * normalContrast, (down - up) * normalContrast, 1f).normalized;
-                    float encodedX = normal.x * 0.5f + 0.5f;
-                    float encodedY = normal.y * 0.5f + 0.5f;
-                    float encodedZ = normal.z * 0.5f + 0.5f;
-
-                    texture.SetPixel(x, y, new Color(encodedX, encodedY, encodedZ, encodedX));
-                }
-            }
-
-            texture.Apply(true, true);
-            return texture;
-        }
-
-        private float GroundDetailTextureNoise(float u, float v, float offset)
-        {
-            float seedOffset = seed * 0.00037f + offset;
-            float broad = Mathf.PerlinNoise(u * 3.7f + seedOffset, v * 3.1f - seedOffset);
-            float mid = Mathf.PerlinNoise(u * 11.9f - seedOffset * 0.7f, v * 9.4f + seedOffset * 0.9f);
-            float grain = Mathf.PerlinNoise(u * 29.5f + seedOffset * 1.3f, v * 33.2f - seedOffset * 1.1f);
-            return Mathf.Clamp01(broad * 0.26f + mid * 0.34f + grain * 0.40f);
-        }
-
-        private static float Wrap01(float value)
-        {
-            value %= 1f;
-            return value < 0f ? value + 1f : value;
+            return material.GetTexture(propertyName) as Texture2D;
         }
 
         private static void ConfigureGroundDetailMaterial(Material material, Texture2D albedo, Texture2D normal, float tiling, float normalStrength)
         {
-            if (material == null)
-            {
-                return;
-            }
-
-            Vector2 scale = Vector2.one * Mathf.Max(1f, tiling);
-            if (albedo != null)
-            {
-                if (material.HasProperty("_BaseMap"))
-                {
-                    material.SetTexture("_BaseMap", albedo);
-                    material.SetTextureScale("_BaseMap", scale);
-                }
-
-                if (material.HasProperty("_MainTex"))
-                {
-                    material.SetTexture("_MainTex", albedo);
-                    material.SetTextureScale("_MainTex", scale);
-                }
-            }
-
-            if (normal != null && normalStrength > 0f && material.HasProperty("_BumpMap"))
-            {
-                material.SetTexture("_BumpMap", normal);
-                material.SetTextureScale("_BumpMap", scale);
-                if (material.HasProperty("_BumpScale")) material.SetFloat("_BumpScale", normalStrength);
-                material.EnableKeyword("_NORMALMAP");
-            }
+            ValendiaGroundTextureFactory.ConfigureMaterial(material, albedo, normal, tiling, normalStrength);
         }
 
         private void ApplyAtmosphere()

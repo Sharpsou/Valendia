@@ -15,6 +15,9 @@ namespace Valendia.Editor
         private const string PreviewPath = "Assets/Valendia/Docs/ValendiaPrototypePreview.png";
         private const string WindowsBuildPath = "Builds/Windows/Valendia.exe";
         private const string MaterialFolder = "Assets/Valendia/Materials";
+        private const string GroundTextureFolder = "Assets/Valendia/Art/Environment/Ground/Textures";
+        private const string GroundDetailTexturePath = GroundTextureFolder + "/Valendia Organic Ground Detail.asset";
+        private const string GroundNormalTexturePath = GroundTextureFolder + "/Valendia Organic Ground Normal.asset";
         private static readonly string[] AuthoredTreePrefabPaths =
         {
             "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_broad_01.fbx",
@@ -250,12 +253,19 @@ namespace Valendia.Editor
         {
             EnsureMaterialFolder();
             SerializedObject serializedGenerator = new SerializedObject(generator);
+            int seed = serializedGenerator.FindProperty("seed").intValue;
+            float groundTextureStrength = serializedGenerator.FindProperty("groundTextureStrength").floatValue;
+            float groundTextureTiling = serializedGenerator.FindProperty("groundTextureTiling").floatValue;
+            float groundNormalStrength = serializedGenerator.FindProperty("groundNormalStrength").floatValue;
+            Texture2D groundDetailTexture = EnsureGroundDetailTextureAsset(seed, groundTextureStrength);
+            Texture2D groundNormalTexture = EnsureGroundNormalTextureAsset(seed);
+
             SetMaterial(serializedGenerator, "skyboxMaterial", EnsureSkyboxMaterial("Valendia Painted Cyan Sky"));
-            SetMaterial(serializedGenerator, "groundMaterial", EnsureLitMaterial("Valendia Fresh Valley Ground", new Color(0.30f, 0.56f, 0.38f), 0.18f, true));
-            SetMaterial(serializedGenerator, "autumnGroundMaterial", EnsureLitMaterial("Valendia Autumn Grove Ground", new Color(0.42f, 0.48f, 0.30f), 0.18f, true));
-            SetMaterial(serializedGenerator, "goldenGrassGroundMaterial", EnsureLitMaterial("Valendia Golden Grass Ground", new Color(0.48f, 0.54f, 0.32f), 0.18f, true));
-            SetMaterial(serializedGenerator, "lavenderGroundMaterial", EnsureLitMaterial("Valendia Lavender Field Ground", new Color(0.34f, 0.52f, 0.42f), 0.18f, true));
-            SetMaterial(serializedGenerator, "scrubGroundMaterial", EnsureLitMaterial("Valendia Mountain Scrub Ground", new Color(0.32f, 0.42f, 0.30f), 0.2f, true));
+            SetMaterial(serializedGenerator, "groundMaterial", EnsureGroundMaterial("Valendia Fresh Valley Ground", new Color(0.30f, 0.56f, 0.38f), 0.18f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength));
+            SetMaterial(serializedGenerator, "autumnGroundMaterial", EnsureGroundMaterial("Valendia Autumn Grove Ground", new Color(0.42f, 0.48f, 0.30f), 0.18f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength));
+            SetMaterial(serializedGenerator, "goldenGrassGroundMaterial", EnsureGroundMaterial("Valendia Golden Grass Ground", new Color(0.48f, 0.54f, 0.32f), 0.18f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength));
+            SetMaterial(serializedGenerator, "lavenderGroundMaterial", EnsureGroundMaterial("Valendia Lavender Field Ground", new Color(0.34f, 0.52f, 0.42f), 0.18f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength));
+            SetMaterial(serializedGenerator, "scrubGroundMaterial", EnsureGroundMaterial("Valendia Mountain Scrub Ground", new Color(0.32f, 0.42f, 0.30f), 0.2f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling * 0.85f, groundNormalStrength * 0.75f));
             SetMaterial(serializedGenerator, "pathMaterial", EnsureLitMaterial("Valendia Warm Dust Path", new Color(0.56f, 0.39f, 0.22f), 0.28f, true));
             SetMaterial(serializedGenerator, "meadowMaterial", EnsureLitMaterial("Valendia Meadow Brush", new Color(0.22f, 0.50f, 0.30f), 0.16f, true));
             SetMaterial(serializedGenerator, "goldenMeadowMaterial", EnsureLitMaterial("Valendia Golden Meadow Brush", new Color(0.50f, 0.50f, 0.24f), 0.16f, true));
@@ -284,6 +294,26 @@ namespace Valendia.Editor
             {
                 AssetDatabase.CreateFolder("Assets/Valendia", "Materials");
             }
+        }
+
+        private static void EnsureGroundTextureFolder()
+        {
+            EnsureAssetFolder("Assets/Valendia/Art");
+            EnsureAssetFolder("Assets/Valendia/Art/Environment");
+            EnsureAssetFolder("Assets/Valendia/Art/Environment/Ground");
+            EnsureAssetFolder(GroundTextureFolder);
+        }
+
+        private static void EnsureAssetFolder(string folderPath)
+        {
+            if (AssetDatabase.IsValidFolder(folderPath))
+            {
+                return;
+            }
+
+            string parent = Path.GetDirectoryName(folderPath).Replace('\\', '/');
+            string name = Path.GetFileName(folderPath);
+            AssetDatabase.CreateFolder(parent, name);
         }
 
         private static void SetMaterial(SerializedObject serializedObject, string propertyName, Material material)
@@ -336,6 +366,71 @@ namespace Valendia.Editor
             }
 
             return material;
+        }
+
+        private static Material EnsureGroundMaterial(
+            string materialName,
+            Color color,
+            float smoothness,
+            bool doubleSided,
+            Texture2D detailTexture,
+            Texture2D normalTexture,
+            float tiling,
+            float normalStrength)
+        {
+            Material material = EnsureLitMaterial(materialName, color, smoothness, doubleSided);
+            ValendiaGroundTextureFactory.ConfigureMaterial(material, detailTexture, normalTexture, tiling, normalStrength);
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static Texture2D EnsureGroundDetailTextureAsset(int seed, float textureStrength)
+        {
+            EnsureGroundTextureFolder();
+            Texture2D generated = ValendiaGroundTextureFactory.CreateDetailTexture(
+                seed,
+                textureStrength,
+                "Valendia Organic Ground Detail",
+                new Color(0.86f, 0.92f, 0.78f),
+                new Color(1f, 1f, 0.93f),
+                0f,
+                false);
+
+            return EnsureTextureAsset(GroundDetailTexturePath, generated);
+        }
+
+        private static Texture2D EnsureGroundNormalTextureAsset(int seed)
+        {
+            EnsureGroundTextureFolder();
+            Texture2D generated = ValendiaGroundTextureFactory.CreateNormalTexture(
+                seed,
+                "Valendia Organic Ground Normal",
+                0f,
+                ValendiaGroundTextureFactory.NormalContrast,
+                false);
+
+            return EnsureTextureAsset(GroundNormalTexturePath, generated);
+        }
+
+        private static Texture2D EnsureTextureAsset(string path, Texture2D generated)
+        {
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null)
+            {
+                AssetDatabase.CreateAsset(generated, path);
+                texture = generated;
+            }
+            else
+            {
+                EditorUtility.CopySerialized(generated, texture);
+                Object.DestroyImmediate(generated);
+            }
+
+            texture.wrapMode = TextureWrapMode.Repeat;
+            texture.filterMode = FilterMode.Bilinear;
+            EditorUtility.SetDirty(texture);
+            AssetDatabase.ImportAsset(path);
+            return texture;
         }
 
         private static Material EnsureUnlitMaterial(string materialName, Color color, bool doubleSided)
