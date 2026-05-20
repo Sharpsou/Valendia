@@ -270,11 +270,6 @@ namespace Valendia.Editor
             SetMaterial(serializedGenerator, "meadowMaterial", EnsureLitMaterial("Valendia Meadow Brush", new Color(0.22f, 0.50f, 0.30f), 0.16f, true));
             SetMaterial(serializedGenerator, "goldenMeadowMaterial", EnsureLitMaterial("Valendia Golden Meadow Brush", new Color(0.50f, 0.50f, 0.24f), 0.16f, true));
             SetMaterial(serializedGenerator, "lavenderMeadowMaterial", EnsureLitMaterial("Valendia Lavender Meadow Brush", new Color(0.58f, 0.38f, 0.58f), 0.16f, true));
-            SetMaterial(serializedGenerator, "trunkMaterial", EnsureLitMaterial("Valendia Faceted Trunk", new Color(0.26f, 0.14f, 0.09f), 0.32f, false));
-            SetMaterial(serializedGenerator, "leafMaterial", EnsureLitMaterial("Valendia Spring Leaf Crowns", new Color(0.20f, 0.49f, 0.25f), 0.28f, true));
-            SetMaterial(serializedGenerator, "warmLeafMaterial", EnsureLitMaterial("Valendia Warm Leaf Crowns", new Color(0.72f, 0.50f, 0.22f), 0.28f, true));
-            SetMaterial(serializedGenerator, "darkLeafMaterial", EnsureLitMaterial("Valendia Deep Green Crowns", new Color(0.12f, 0.27f, 0.12f), 0.3f, true));
-            SetMaterial(serializedGenerator, "autumnLeafMaterial", EnsureLitMaterial("Valendia Autumn Leaf Crowns", new Color(0.63f, 0.38f, 0.18f), 0.28f, true));
             SetMaterial(serializedGenerator, "grassMaterial", EnsureLitMaterial("Valendia Fresh Green Grass Blades", new Color(0.34f, 0.62f, 0.34f), 0.2f, true));
             SetMaterial(serializedGenerator, "oliveGrassMaterial", EnsureLitMaterial("Valendia Olive Grass Blades", new Color(0.28f, 0.44f, 0.25f), 0.22f, true));
             SetMaterial(serializedGenerator, "goldenGrassBladeMaterial", EnsureLitMaterial("Valendia Golden Straw Grass Blades", new Color(0.72f, 0.60f, 0.25f), 0.18f, true));
@@ -339,7 +334,6 @@ namespace Valendia.Editor
             }
 
             serializedGenerator.FindProperty("generateAuthoredTreePrefabs").boolValue = true;
-            serializedGenerator.FindProperty("generateLegacyProceduralTrees").boolValue = false;
             serializedGenerator.ApplyModifiedPropertiesWithoutUndo();
         }
 

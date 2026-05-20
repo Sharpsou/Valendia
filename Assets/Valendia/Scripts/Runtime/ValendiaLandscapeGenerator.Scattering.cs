@@ -79,39 +79,6 @@ namespace Valendia.Runtime
             collider.height = 2.3f;
         }
 
-        private void ScatterTrees()
-        {
-            if (!generateLegacyProceduralTrees)
-            {
-                return;
-            }
-
-            Transform parent = CreateContainer("Trees");
-            System.Random random = new System.Random(seed + 101);
-            int placed = 0;
-            int attempts = treeCount * 8;
-
-            for (int i = 0; i < attempts && placed < treeCount; i++)
-            {
-                Vector3 point = RandomPoint(random);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance))
-                {
-                    continue;
-                }
-
-                float slope = SlopeAt(point.x, point.z);
-                float fertility = Mathf.PerlinNoise((point.x + seed) * 0.012f, (point.z - seed) * 0.012f);
-                if (slope > maxTreeSlope || fertility < 0.34f)
-                {
-                    continue;
-                }
-
-                point.y = HeightAt(point.x, point.z);
-                CreateTree(parent, point, random, BiomeAt(point.x, point.z));
-                placed++;
-            }
-        }
-
         private void ScatterMeadowPatches()
         {
             Transform parent = CreateContainer("Organic Meadow Stroke Seeds");
@@ -373,22 +340,6 @@ namespace Valendia.Runtime
                         }
                     }
 
-                    int trees = generateLegacyProceduralTrees ? random.Next(3, 7) : 0;
-                    for (int tree = 0; tree < trees; tree++)
-                    {
-                        Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.44f, chunkSize * 0.2f);
-                        if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance) || SlopeAt(point.x, point.z) > maxTreeSlope + 6f)
-                        {
-                            continue;
-                        }
-
-                        point.y = HeightAt(point.x, point.z);
-                        Biome treeBiome = BorderTreeBiome(random);
-                        float coniferChance = treeBiome == Biome.MountainScrub ? 0.38f : 0.12f;
-                        GameObject borderTree = CreateTree(parent, point, random, treeBiome, coniferChance);
-                        borderTree.transform.localScale *= Mathf.Lerp(0.78f, 1.05f, (float)random.NextDouble());
-                    }
-
                     int grassTufts = random.Next(44, 84);
                     for (int grass = 0; grass < grassTufts; grass++)
                     {
@@ -462,27 +413,6 @@ namespace Valendia.Runtime
             return side < 2
                 ? new Vector3(along, 0f, depth)
                 : new Vector3(depth, 0f, along);
-        }
-
-        private static Biome BorderTreeBiome(System.Random random)
-        {
-            double roll = random.NextDouble();
-            if (roll < 0.42)
-            {
-                return Biome.ValleyGrass;
-            }
-
-            if (roll < 0.68)
-            {
-                return Biome.AutumnGrove;
-            }
-
-            if (roll < 0.86)
-            {
-                return Biome.GoldenGrass;
-            }
-
-            return Biome.MountainScrub;
         }
 
         private void ScatterRocks()

@@ -32,13 +32,9 @@ namespace Valendia.Runtime
         [SerializeField, Range(0f, 0.35f)] private float borderMountainWallStrength = 0.18f;
 
         [Header("Vegetation")]
-        [SerializeField] private bool generateLegacyProceduralTrees = false;
         [SerializeField] private bool generateAuthoredTreePrefabs = true;
         [SerializeField, Min(0)] private int authoredTreePrefabCount = 520;
         [SerializeField] private GameObject[] authoredTreePrefabs = Array.Empty<GameObject>();
-        [SerializeField, Min(0)] private int treeCount = 920;
-        [SerializeField, Min(0)] private int authoredGroveCount = 14;
-        [SerializeField, Min(0)] private int forestPocketCount = 12;
         [SerializeField, Min(0)] private int meadowPatchCount = 2400;
         [SerializeField, Min(0)] private int flowerRibbonCount = 32;
         [SerializeField, Min(0)] private int pathEdgePatchCount = 2400;
@@ -68,11 +64,6 @@ namespace Valendia.Runtime
         [SerializeField] private Material meadowMaterial;
         [SerializeField] private Material goldenMeadowMaterial;
         [SerializeField] private Material lavenderMeadowMaterial;
-        [SerializeField] private Material trunkMaterial;
-        [SerializeField] private Material leafMaterial;
-        [SerializeField] private Material warmLeafMaterial;
-        [SerializeField] private Material darkLeafMaterial;
-        [SerializeField] private Material autumnLeafMaterial;
         [SerializeField] private Material grassMaterial;
         [SerializeField] private Material oliveGrassMaterial;
         [SerializeField] private Material goldenGrassBladeMaterial;
@@ -223,9 +214,6 @@ namespace Valendia.Runtime
             GenerateDistantSpires();
             ScatterRocks();
             ScatterAuthoredTreePrefabs();
-            ScatterTrees();
-            GenerateAuthoredGroves();
-            GenerateForestPockets();
             GenerateFlowerRibbons();
             ScatterGrass();
             ScatterFlowerPatches();

@@ -6,59 +6,6 @@ namespace Valendia.Runtime
 {
     public sealed partial class ValendiaLandscapeGenerator
     {
-        private GameObject CreateTree(Transform parent, Vector3 position, System.Random random, Biome biome, float coniferChanceOverride = -1f)
-        {
-            GameObject tree = new GameObject("Stylized Faceted Tree");
-            tree.transform.SetParent(parent, false);
-            tree.transform.position = position;
-            tree.transform.rotation = Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f);
-            float scale = Mathf.Lerp(0.82f, 1.36f, (float)random.NextDouble());
-            tree.transform.localScale = Vector3.one * scale;
-
-            float trunkHeight = Mathf.Lerp(2.15f, 3.15f, (float)random.NextDouble());
-            GameObject trunk = CreateMeshObject(
-                "Faceted Trunk",
-                CreateTaperedCylinderMesh(0.27f, 0.16f, trunkHeight, 7, random),
-                trunkMaterial,
-                tree.transform);
-            trunk.transform.localRotation = Quaternion.Euler(
-                Mathf.Lerp(-2f, 2f, (float)random.NextDouble()),
-                0f,
-                Mathf.Lerp(-3f, 3f, (float)random.NextDouble()));
-            AddTreeTrunkCollider(tree, trunkHeight);
-
-            Material crownMaterial = LeafMaterialForBiome(biome, random);
-            float coniferChance = coniferChanceOverride >= 0f
-                ? coniferChanceOverride
-                : biome == Biome.MountainScrub ? 0.72f : 0.06f;
-            bool conifer = random.NextDouble() < coniferChance;
-            if (conifer)
-            {
-                CreateConiferCanopy(tree.transform, crownMaterial, trunkHeight, random);
-            }
-            else
-            {
-                CreateBroadCanopy(tree.transform, crownMaterial, trunkHeight, random);
-            }
-
-            return tree;
-        }
-
-        private Material LeafMaterialForBiome(Biome biome, System.Random random)
-        {
-            switch (biome)
-            {
-                case Biome.AutumnGrove:
-                    return random.NextDouble() < 0.68 ? autumnLeafMaterial : warmLeafMaterial;
-                case Biome.GoldenGrass:
-                    return random.NextDouble() < 0.45 ? warmLeafMaterial : leafMaterial;
-                case Biome.MountainScrub:
-                    return darkLeafMaterial;
-                default:
-                    return random.NextDouble() < 0.2 ? warmLeafMaterial : leafMaterial;
-            }
-        }
-
         private void BeginMeadowBatches()
         {
             meadowBatchRoot = CreateContainer("Organic Meadow Grass Batches");

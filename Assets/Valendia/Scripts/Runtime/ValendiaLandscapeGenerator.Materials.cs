@@ -16,9 +16,6 @@ namespace Valendia.Runtime
             if (scrubGroundMaterial == null) scrubGroundMaterial = CreateMaterial("Valendia Mountain Scrub Ground", new Color(0.32f, 0.42f, 0.30f), 0.2f);
             if (pathMaterial == null) pathMaterial = CreateMaterial("Valendia Warm Dust Path", new Color(0.56f, 0.39f, 0.22f), 0.28f);
             if (pathMaterial != null && pathMaterial.HasProperty("_Cull")) pathMaterial.SetFloat("_Cull", 0f);
-            if (trunkMaterial == null) trunkMaterial = CreateMaterial("Valendia Faceted Trunk", new Color(0.26f, 0.14f, 0.09f), 0.32f);
-            if (leafMaterial == null) leafMaterial = CreateMaterial("Valendia Spring Leaf Crowns", new Color(0.20f, 0.49f, 0.25f), 0.28f);
-            if (autumnLeafMaterial == null) autumnLeafMaterial = CreateMaterial("Valendia Autumn Leaf Crowns", new Color(0.63f, 0.38f, 0.18f), 0.28f);
             if (grassMaterial == null) grassMaterial = CreateMaterial("Valendia Fresh Green Grass Blades", new Color(0.34f, 0.62f, 0.34f), 0.2f);
             if (oliveGrassMaterial == null) oliveGrassMaterial = CreateMaterial("Valendia Olive Grass Blades", new Color(0.28f, 0.44f, 0.25f), 0.22f);
             if (goldenGrassBladeMaterial == null) goldenGrassBladeMaterial = CreateMaterial("Valendia Golden Straw Grass Blades", new Color(0.72f, 0.60f, 0.25f), 0.18f);
@@ -28,8 +25,6 @@ namespace Valendia.Runtime
             if (meadowMaterial == null) meadowMaterial = CreateMaterial("Valendia Meadow Brush", new Color(0.22f, 0.50f, 0.30f), 0.16f);
             if (goldenMeadowMaterial == null) goldenMeadowMaterial = CreateMaterial("Valendia Golden Meadow Brush", new Color(0.50f, 0.50f, 0.24f), 0.16f);
             if (lavenderMeadowMaterial == null) lavenderMeadowMaterial = CreateMaterial("Valendia Lavender Meadow Brush", new Color(0.58f, 0.38f, 0.58f), 0.16f);
-            if (warmLeafMaterial == null) warmLeafMaterial = CreateMaterial("Valendia Warm Leaf Crowns", new Color(0.72f, 0.50f, 0.22f), 0.28f);
-            if (darkLeafMaterial == null) darkLeafMaterial = CreateMaterial("Valendia Deep Green Crowns", new Color(0.12f, 0.27f, 0.12f), 0.3f);
             if (rockMaterial == null) rockMaterial = CreateMaterial("Valendia Warm Limestone", new Color(0.72f, 0.62f, 0.44f), 0.38f);
             if (cloudMaterial == null) cloudMaterial = CreateUnlitMaterial("Valendia Soft Autumn Cloud", new Color(0.96f, 0.88f, 0.66f));
             if (cloudShadowCasterMaterial == null) cloudShadowCasterMaterial = CreateMaterial("Valendia Cloud Shadow Caster", new Color(0.88f, 0.82f, 0.68f), 0f);
@@ -41,10 +36,6 @@ namespace Valendia.Runtime
             ConfigureGroundDetailMaterial(lavenderGroundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength);
             ConfigureGroundDetailMaterial(scrubGroundMaterial, groundDetailTexture, groundNormalTexture, groundTextureTiling * 0.85f, groundNormalStrength * 0.75f);
 
-            ConfigureDoubleSidedMaterial(leafMaterial);
-            ConfigureDoubleSidedMaterial(autumnLeafMaterial);
-            ConfigureDoubleSidedMaterial(warmLeafMaterial);
-            ConfigureDoubleSidedMaterial(darkLeafMaterial);
             ConfigureDoubleSidedMaterial(grassMaterial);
             ConfigureDoubleSidedMaterial(oliveGrassMaterial);
             ConfigureDoubleSidedMaterial(goldenGrassBladeMaterial);

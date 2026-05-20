@@ -26,81 +26,6 @@ namespace Valendia.Runtime
             AddApproximateBoxCollider(rock, new Vector3(0f, 0.02f, 0f), new Vector3(1.35f, 1.15f, 1.35f));
         }
 
-        private void CreateBroadCanopy(Transform tree, Material crownMaterial, float trunkHeight, System.Random random)
-        {
-            GameObject underside = CreateMeshObject(
-                "Solid Leaf Underside",
-                CreateLeafCushionMesh(random, 0.08f),
-                crownMaterial,
-                tree);
-            ConfigureLeafRenderer(underside.GetComponent<MeshRenderer>());
-            underside.transform.localPosition = new Vector3(0f, trunkHeight - 0.28f, 0f);
-            underside.transform.localScale = new Vector3(1.22f, 0.46f, 1.22f);
-
-            GameObject belly = CreateMeshObject(
-                "Leaf Belly Volume",
-                CreateLeafCushionMesh(random, 0.14f),
-                crownMaterial,
-                tree);
-            ConfigureLeafRenderer(belly.GetComponent<MeshRenderer>());
-            belly.transform.localPosition = new Vector3(0f, trunkHeight + 0.06f, 0f);
-            belly.transform.localRotation = Quaternion.Euler(0f, Mathf.Lerp(0f, 360f, (float)random.NextDouble()), 0f);
-            belly.transform.localScale = new Vector3(1.42f, 1.08f, 1.42f);
-
-            int lobes = random.Next(4, 7);
-            for (int i = 0; i < lobes; i++)
-            {
-                float angle = Mathf.PI * 2f * i / lobes + Mathf.Lerp(-0.35f, 0.35f, (float)random.NextDouble());
-                float offset = i == 0 ? 0f : Mathf.Lerp(0.45f, 1.15f, (float)random.NextDouble());
-                GameObject lobe = CreateMeshObject(
-                    i == 0 ? "Main Leaf Crown" : "Leaf Crown Lobe",
-                    CreateLeafCushionMesh(random, 0.18f),
-                    crownMaterial,
-                    tree);
-                ConfigureLeafRenderer(lobe.GetComponent<MeshRenderer>());
-                float vertical = trunkHeight + Mathf.Lerp(0.08f, 1.02f, (float)random.NextDouble());
-                lobe.transform.localPosition = new Vector3(Mathf.Cos(angle) * offset, vertical, Mathf.Sin(angle) * offset);
-                lobe.transform.localRotation = Quaternion.Euler(
-                    Mathf.Lerp(-8f, 8f, (float)random.NextDouble()),
-                    Mathf.Lerp(0f, 360f, (float)random.NextDouble()),
-                    Mathf.Lerp(-8f, 8f, (float)random.NextDouble()));
-                lobe.transform.localScale = new Vector3(
-                    Mathf.Lerp(1.05f, 1.62f, (float)random.NextDouble()),
-                    Mathf.Lerp(1.02f, 1.55f, (float)random.NextDouble()),
-                    Mathf.Lerp(1.05f, 1.62f, (float)random.NextDouble()));
-            }
-
-            int branches = random.Next(3, 6);
-            for (int i = 0; i < branches; i++)
-            {
-                float angle = Mathf.PI * 2f * i / branches + Mathf.Lerp(-0.4f, 0.4f, (float)random.NextDouble());
-                GameObject branch = CreateMeshObject(
-                    "Simple Branch",
-                    CreateTaperedCylinderMesh(0.075f, 0.032f, Mathf.Lerp(0.75f, 1.22f, (float)random.NextDouble()), 5, random),
-                    trunkMaterial,
-                    tree);
-                branch.transform.localPosition = new Vector3(0f, trunkHeight * Mathf.Lerp(0.64f, 0.86f, (float)random.NextDouble()), 0f);
-                branch.transform.localRotation = Quaternion.Euler(Mathf.Lerp(54f, 70f, (float)random.NextDouble()), angle * Mathf.Rad2Deg, Mathf.Lerp(-6f, 6f, (float)random.NextDouble()));
-            }
-        }
-
-        private void CreateConiferCanopy(Transform tree, Material crownMaterial, float trunkHeight, System.Random random)
-        {
-            int tiers = random.Next(3, 5);
-            for (int i = 0; i < tiers; i++)
-            {
-                float t = i / (float)Mathf.Max(1, tiers - 1);
-                GameObject tier = CreateMeshObject(
-                    "Faceted Conifer Tier",
-                    CreateConeMesh(Mathf.Lerp(1.15f, 0.45f, t), Mathf.Lerp(1.05f, 1.42f, (float)random.NextDouble()), 7),
-                    crownMaterial,
-                    tree);
-                ConfigureLeafRenderer(tier.GetComponent<MeshRenderer>());
-                tier.transform.localPosition = new Vector3(0f, trunkHeight * 0.43f + i * 0.66f, 0f);
-                tier.transform.localRotation = Quaternion.Euler(0f, Mathf.Lerp(0f, 360f, (float)random.NextDouble()), 0f);
-            }
-        }
-
         private void CreateCloud(Transform parent, Vector3 position, System.Random random)
         {
             GameObject cloud = new GameObject("Soft Low Poly Cloud");
@@ -215,12 +140,6 @@ namespace Valendia.Runtime
         {
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows = true;
-        }
-
-        private static void ConfigureLeafRenderer(MeshRenderer renderer)
-        {
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
-            renderer.receiveShadows = false;
         }
 
         private static GameObject CreateGrassLodObject(string objectName, Mesh lod0Mesh, Material material, Transform parent)
