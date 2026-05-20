@@ -75,8 +75,6 @@ Fonctions presentes :
 - dispersion de rochers, arbres authores Blender, touffes d'herbe, fleurs lavande et scrub ;
 - arbres remplaces par 5 variantes Blender importees en FBX, rangees dans `Assets/Valendia/Art/Environment/Trees/Exports/FBX` avec source `.blend` dans `SourceAssets/Valendia/Art/Environment/Trees/Blender` ;
 - foret peripherique optionnelle `Perimeter Forest Ring`, generee avec les arbres Blender dans une bande de 1% a 10% de la largeur de map autour des quatre bords pour rejoindre les murs de bord ;
-- les arbres font partie du monde explorable : conserver leur presence et leurs colliders/interactions ; les optimisations doivent agir sur le rendu distant via LOD, pas supprimer les arbres jouables ;
-- LOD runtime des arbres active : LOD0 garde les prefabs Blender complets pres du joueur, LOD1/LOD2 basculent vers des silhouettes low-poly legeres au loin tout en gardant les colliders racine ;
 - ancien pipeline d'arbres proceduraux supprime pour eviter deux systemes concurrents ;
 - herbe densifiee avec des touffes multi-brins double face, plus larges et plus nombreuses ;
 - fleurs lavande regroupees en patchs plus visibles ;
