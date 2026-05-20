@@ -18,6 +18,8 @@ Assets/Valendia/ValendiaPrototype.unity
 Assets/Valendia/ValendiaPrototype.unity.meta
 Assets/Valendia/Docs/ValendiaPrototypePreview.png
 Assets/Valendia/Docs/ValendiaPrototypePreview.png.meta
+Assets/Valendia/Generated.meta
+Assets/Valendia/Generated/
 
 # Unity generated files
 *.csproj

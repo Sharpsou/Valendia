@@ -32,6 +32,10 @@ namespace Valendia.Runtime
         [SerializeField, Range(0f, 0.35f)] private float borderMountainWallStrength = 0.18f;
 
         [Header("Vegetation")]
+        [SerializeField] private bool generateLegacyProceduralTrees = false;
+        [SerializeField] private bool generateAuthoredTreePrefabs = true;
+        [SerializeField, Min(0)] private int authoredTreePrefabCount = 520;
+        [SerializeField] private GameObject[] authoredTreePrefabs = Array.Empty<GameObject>();
         [SerializeField, Min(0)] private int treeCount = 920;
         [SerializeField, Min(0)] private int authoredGroveCount = 14;
         [SerializeField, Min(0)] private int forestPocketCount = 12;
@@ -219,6 +223,7 @@ namespace Valendia.Runtime
             ScatterMeadowPatches();
             GenerateDistantSpires();
             ScatterRocks();
+            ScatterAuthoredTreePrefabs();
             ScatterTrees();
             GenerateAuthoredGroves();
             GenerateForestPockets();

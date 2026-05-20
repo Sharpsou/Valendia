@@ -127,6 +127,11 @@ namespace Valendia.Runtime
 
         private void GenerateAuthoredGroves()
         {
+            if (!generateLegacyProceduralTrees)
+            {
+                return;
+            }
+
             Transform parent = CreateContainer("Authored Path Groves");
             System.Random random = new System.Random(seed + 1001);
 
@@ -162,6 +167,11 @@ namespace Valendia.Runtime
 
         private void GenerateForestPockets()
         {
+            if (!generateLegacyProceduralTrees)
+            {
+                return;
+            }
+
             Transform parent = CreateContainer("Autumn Forest Pockets");
             System.Random random = new System.Random(seed + 1212);
             int placedPockets = 0;
