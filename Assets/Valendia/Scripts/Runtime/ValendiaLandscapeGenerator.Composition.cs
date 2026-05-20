@@ -267,23 +267,10 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Small Floating Clouds");
             System.Random random = new System.Random(seed + 808);
-            int columns = Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, cloudCount) * 1.35f));
-            int rows = Mathf.CeilToInt(cloudCount / (float)columns);
-            float xMin = -WorldSize * 0.62f;
-            float xMax = WorldSize * 0.62f;
-            float zMin = -WorldSize * 0.42f;
-            float zMax = WorldSize * 0.62f;
 
             for (int i = 0; i < cloudCount; i++)
             {
-                int column = i % columns;
-                int row = i / columns;
-                float xT = (column + 0.5f + Mathf.Lerp(-0.28f, 0.28f, (float)random.NextDouble())) / columns;
-                float zT = (row + 0.5f + Mathf.Lerp(-0.26f, 0.26f, (float)random.NextDouble())) / rows;
-                Vector3 position = new Vector3(
-                    Mathf.Lerp(xMin, xMax, Mathf.Clamp01(xT)),
-                    Mathf.Lerp(128f, 190f, (float)random.NextDouble()),
-                    Mathf.Lerp(zMin, zMax, Mathf.Clamp01(zT)));
+                Vector3 position = CloudFieldPoint(random, i, cloudCount, WorldSize * 0.62f, WorldSize * 0.50f, 128f, 190f);
                 CreateCloud(parent, position, random);
             }
         }
@@ -292,23 +279,10 @@ namespace Valendia.Runtime
         {
             Transform parent = CreateContainer("Illustrative Cloud Banks");
             System.Random random = new System.Random(seed + 818);
-            int columns = Mathf.CeilToInt(Mathf.Sqrt(Mathf.Max(1, cloudBankCount) * 1.2f));
-            int rows = Mathf.CeilToInt(cloudBankCount / (float)columns);
-            float xMin = -WorldSize * 0.60f;
-            float xMax = WorldSize * 0.60f;
-            float zMin = -WorldSize * 0.36f;
-            float zMax = WorldSize * 0.56f;
 
             for (int i = 0; i < cloudBankCount; i++)
             {
-                int column = i % columns;
-                int row = i / columns;
-                float xT = (column + 0.5f + Mathf.Lerp(-0.22f, 0.22f, (float)random.NextDouble())) / columns;
-                float zT = (row + 0.5f + Mathf.Lerp(-0.24f, 0.24f, (float)random.NextDouble())) / rows;
-                Vector3 position = new Vector3(
-                    Mathf.Lerp(xMin, xMax, Mathf.Clamp01(xT)),
-                    Mathf.Lerp(116f, 168f, (float)random.NextDouble()),
-                    Mathf.Lerp(zMin, zMax, Mathf.Clamp01(zT)));
+                Vector3 position = CloudFieldPoint(random, i, cloudBankCount, WorldSize * 0.60f, WorldSize * 0.46f, 116f, 168f);
                 CreateCloudBank(parent, position, random);
             }
         }
@@ -327,6 +301,18 @@ namespace Valendia.Runtime
                     Mathf.Lerp(WorldSize * 0.05f, WorldSize * 0.34f, (float)random.NextDouble()));
                 CreateCloudBank(parent, position, random);
             }
+        }
+
+        private Vector3 CloudFieldPoint(System.Random random, int index, int count, float xRadius, float zRadius, float yMin, float yMax)
+        {
+            const float goldenAngle = 2.39996323f;
+            float countSafe = Mathf.Max(1, count);
+            float ring = Mathf.Sqrt((index + 0.5f) / countSafe);
+            ring = Mathf.Clamp01(ring + Mathf.Lerp(-0.09f, 0.09f, (float)random.NextDouble()));
+            float angle = index * goldenAngle + Mathf.Lerp(-0.38f, 0.38f, (float)random.NextDouble());
+            float x = Mathf.Cos(angle) * ring * xRadius + Mathf.Lerp(-18f, 18f, (float)random.NextDouble());
+            float z = Mathf.Sin(angle) * ring * zRadius + WorldSize * 0.10f + Mathf.Lerp(-16f, 16f, (float)random.NextDouble());
+            return new Vector3(x, Mathf.Lerp(yMin, yMax, (float)random.NextDouble()), z);
         }
     }
 }
