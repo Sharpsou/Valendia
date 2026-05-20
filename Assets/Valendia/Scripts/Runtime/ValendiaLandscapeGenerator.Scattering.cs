@@ -48,6 +48,11 @@ namespace Valendia.Runtime
                 ConfigureAuthoredTreeInstance(tree);
                 placed++;
             }
+
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log($"Valendia authored trees placed: {placed}/{authoredTreePrefabCount} from {authoredTreePrefabs.Length} prefab variants.");
+            }
         }
 
         private static void ConfigureAuthoredTreeInstance(GameObject tree)
