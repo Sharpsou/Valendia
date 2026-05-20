@@ -175,8 +175,8 @@ MonoBehaviour:
   - {fileID: 919132149155446097, guid: 6318fa76f1ef6fd4ca84ada6712d6c95, type: 3}
   - {fileID: 919132149155446097, guid: bf928e52df29ede47b97dfed7ce261ff, type: 3}
   generatePerimeterForest: 1
-  perimeterForestTreeCount: 860
-  perimeterForestMinWidthRatio: 0.05
+  perimeterForestTreeCount: 1500
+  perimeterForestMinWidthRatio: 0.01
   perimeterForestMaxWidthRatio: 0.1
   meadowPatchCount: 2400
   flowerRibbonCount: 32

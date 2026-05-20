@@ -64,7 +64,7 @@ namespace Valendia.Runtime
             float minInset = WorldSize * Mathf.Min(perimeterForestMinWidthRatio, perimeterForestMaxWidthRatio);
             float maxInset = WorldSize * Mathf.Max(perimeterForestMinWidthRatio, perimeterForestMaxWidthRatio);
             int placed = 0;
-            int attempts = perimeterForestTreeCount * 12;
+            int attempts = perimeterForestTreeCount * 16;
 
             for (int attempt = 0; attempt < attempts && placed < perimeterForestTreeCount; attempt++)
             {
@@ -76,7 +76,7 @@ namespace Valendia.Runtime
 
                 float slope = SlopeAt(point.x, point.z);
                 float forestNoise = Mathf.PerlinNoise((point.x + seed * 0.53f) * 0.018f, (point.z - seed * 0.47f) * 0.018f);
-                if (slope > maxTreeSlope + 8f || forestNoise < 0.18f)
+                if (slope > maxTreeSlope + 8f || forestNoise < 0.08f)
                 {
                     continue;
                 }

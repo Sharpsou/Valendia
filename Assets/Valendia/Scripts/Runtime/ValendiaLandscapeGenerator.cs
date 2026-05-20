@@ -36,8 +36,8 @@ namespace Valendia.Runtime
         [SerializeField, Min(0)] private int authoredTreePrefabCount = 520;
         [SerializeField] private GameObject[] authoredTreePrefabs = Array.Empty<GameObject>();
         [SerializeField] private bool generatePerimeterForest = true;
-        [SerializeField, Min(0)] private int perimeterForestTreeCount = 860;
-        [SerializeField, Range(0.01f, 0.25f)] private float perimeterForestMinWidthRatio = 0.05f;
+        [SerializeField, Min(0)] private int perimeterForestTreeCount = 1500;
+        [SerializeField, Range(0.005f, 0.25f)] private float perimeterForestMinWidthRatio = 0.01f;
         [SerializeField, Range(0.01f, 0.25f)] private float perimeterForestMaxWidthRatio = 0.10f;
         [SerializeField, Min(0)] private int meadowPatchCount = 2400;
         [SerializeField, Min(0)] private int flowerRibbonCount = 32;
