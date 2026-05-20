@@ -12,7 +12,6 @@ namespace Valendia.Editor
     {
         private const string ScenePath = "Assets/Valendia/ValendiaPrototype.unity";
         private const string BootstrapScenePath = "Assets/Valendia/ValendiaBootstrap.unity";
-        private const string GeneratedBuildScenePath = "Assets/Valendia/Generated/ValendiaBootstrapBuild.unity";
         private const string PreviewPath = "Assets/Valendia/Docs/ValendiaPrototypePreview.png";
         private const string WindowsBuildPath = "Builds/Windows/Valendia.exe";
         private const string MaterialFolder = "Assets/Valendia/Materials";
@@ -49,14 +48,13 @@ namespace Valendia.Editor
         public static void BuildWindowsPlayer()
         {
             CreateBootstrapSceneAsset();
-            string buildScenePath = CreateGeneratedBuildSceneAsset();
 
             string absoluteBuildPath = Path.GetFullPath(WindowsBuildPath);
             Directory.CreateDirectory(Path.GetDirectoryName(absoluteBuildPath));
 
             BuildPlayerOptions options = new BuildPlayerOptions
             {
-                scenes = new[] { buildScenePath },
+                scenes = new[] { BootstrapScenePath },
                 locationPathName = WindowsBuildPath,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None
@@ -224,26 +222,11 @@ namespace Valendia.Editor
 
         private static ValendiaLandscapeGenerator CreateBootstrapWorld()
         {
-            return CreateBootstrapWorld(false);
-        }
-
-        private static ValendiaLandscapeGenerator CreateBootstrapWorld(bool generateLandscape)
-        {
             GameObject world = new GameObject("Valendia World");
             ValendiaLandscapeGenerator generator = world.AddComponent<ValendiaLandscapeGenerator>();
             AssignRuntimeMaterials(generator);
             AssignAuthoredTreePrefabs(generator);
-
-            if (generateLandscape)
-            {
-                generator.Generate();
-                SetGenerateOnStart(generator, false);
-            }
-            else
-            {
-                SetGenerateOnStart(generator, true);
-            }
-
+            SetGenerateOnStart(generator, true);
             return generator;
         }
 
@@ -261,21 +244,6 @@ namespace Valendia.Editor
             EditorGUIUtility.PingObject(generator.gameObject);
             Debug.Log($"Valendia bootstrap scene written to {BootstrapScenePath}");
             return generator;
-        }
-
-        private static string CreateGeneratedBuildSceneAsset()
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(GeneratedBuildScenePath)));
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-            ValendiaLandscapeGenerator generator = CreateBootstrapWorld(true);
-            CreateLighting();
-            CreatePlayer(generator);
-
-            EditorSceneManager.SaveScene(scene, GeneratedBuildScenePath);
-            AssetDatabase.ImportAsset(GeneratedBuildScenePath);
-            Debug.Log($"Valendia generated build scene written to {GeneratedBuildScenePath}");
-            return GeneratedBuildScenePath;
         }
 
         private static void AssignRuntimeMaterials(ValendiaLandscapeGenerator generator)
