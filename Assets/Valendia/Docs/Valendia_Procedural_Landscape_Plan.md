@@ -55,6 +55,8 @@ Manual path:
 - `terrainMicroReliefStrength`: 0.12 for a safe ground-detail pass; keep below 0.25 unless the terrain is visually rechecked.
 - `groundTextureTiling`: 42 so the generated 128x128 ground detail repeats at meadow scale rather than across the full valley.
 - `authoredTreePrefabCount`: 520 in the current DA validation scene, distributed from the 5 imported Blender oak variants.
+- `perimeterForestTreeCount`: 860 adds a continuous authored-tree forest ring around the map.
+- `perimeterForestMinWidthRatio` / `perimeterForestMaxWidthRatio`: 0.05 to 0.10, so the forest occupies a 36-72 unit band on the current 720 unit map.
 - `grassTuftCount`: 360000 in the current DA validation scene, split into material and spatial batches so the path-edge density now reads across the whole map.
 - `heightScale`: 30, `distantMountainStrength`: 0.12, `borderMountainWallStrength`: 0.18, and `distantSpireCount`: 64 keep the valley soft while closing the horizon with overlapping mountain accents and sealed corner massifs, without adding a continuous wall surface.
 - `borderVegetationClusterCount`: 144 keeps the mountain-scrub border from thinning out by adding clustered rocks, scrub, meadow strokes, and grass along all four edges.

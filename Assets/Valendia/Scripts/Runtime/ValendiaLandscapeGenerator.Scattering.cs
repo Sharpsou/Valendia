@@ -40,12 +40,8 @@ namespace Valendia.Runtime
                 }
 
                 point.y = HeightAt(point.x, point.z);
-                GameObject tree = Instantiate(prefab, point, Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f), parent);
-                tree.name = prefab.name;
                 float scale = Mathf.Lerp(1.37f, 2.16f, (float)random.NextDouble());
-                tree.transform.localScale = Vector3.one * scale;
-                tree.isStatic = true;
-                ConfigureAuthoredTreeInstance(tree);
+                InstantiateAuthoredTree(prefab, parent, point, (float)random.NextDouble() * 360f, scale);
                 placed++;
             }
 
@@ -53,6 +49,86 @@ namespace Valendia.Runtime
             {
                 Debug.Log($"Valendia authored trees placed: {placed}/{authoredTreePrefabCount} from {authoredTreePrefabs.Length} prefab variants.");
             }
+        }
+
+        private void ScatterPerimeterForest()
+        {
+            if (!generatePerimeterForest || perimeterForestTreeCount <= 0 || authoredTreePrefabs == null || authoredTreePrefabs.Length == 0)
+            {
+                return;
+            }
+
+            Transform parent = CreateContainer("Perimeter Forest Ring");
+            System.Random random = new System.Random(seed + 2419);
+            float halfWorld = WorldSize * 0.5f;
+            float minInset = WorldSize * Mathf.Min(perimeterForestMinWidthRatio, perimeterForestMaxWidthRatio);
+            float maxInset = WorldSize * Mathf.Max(perimeterForestMinWidthRatio, perimeterForestMaxWidthRatio);
+            int placed = 0;
+            int attempts = perimeterForestTreeCount * 12;
+
+            for (int attempt = 0; attempt < attempts && placed < perimeterForestTreeCount; attempt++)
+            {
+                Vector3 point = PerimeterForestPoint(random, halfWorld, minInset, maxInset);
+                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance * 1.35f))
+                {
+                    continue;
+                }
+
+                float slope = SlopeAt(point.x, point.z);
+                float forestNoise = Mathf.PerlinNoise((point.x + seed * 0.53f) * 0.018f, (point.z - seed * 0.47f) * 0.018f);
+                if (slope > maxTreeSlope + 8f || forestNoise < 0.18f)
+                {
+                    continue;
+                }
+
+                GameObject prefab = authoredTreePrefabs[random.Next(authoredTreePrefabs.Length)];
+                if (prefab == null)
+                {
+                    continue;
+                }
+
+                point.y = HeightAt(point.x, point.z);
+                float edgeDistance = Mathf.Min(halfWorld - Mathf.Abs(point.x), halfWorld - Mathf.Abs(point.z));
+                float depth = Mathf.InverseLerp(maxInset, minInset, edgeDistance);
+                float scale = Mathf.Lerp(1.46f, 2.34f, (float)random.NextDouble()) * Mathf.Lerp(0.92f, 1.12f, depth);
+                InstantiateAuthoredTree(prefab, parent, point, (float)random.NextDouble() * 360f, scale);
+                placed++;
+            }
+
+            if (Debug.isDebugBuild)
+            {
+                Debug.Log($"Valendia perimeter forest placed: {placed}/{perimeterForestTreeCount} in {minInset:0.#}-{maxInset:0.#} world-unit border band.");
+            }
+        }
+
+        private Vector3 PerimeterForestPoint(System.Random random, float halfWorld, float minInset, float maxInset)
+        {
+            int side = random.Next(4);
+            float along = Mathf.Lerp(-halfWorld, halfWorld, (float)random.NextDouble());
+            float inset = Mathf.Lerp(minInset, maxInset, Mathf.Sqrt((float)random.NextDouble()));
+            float sideJitter = Mathf.Lerp(-chunkSize * 0.018f, chunkSize * 0.018f, (float)random.NextDouble());
+
+            switch (side)
+            {
+                case 0:
+                    return new Vector3(Mathf.Clamp(along + sideJitter, -halfWorld, halfWorld), 0f, -halfWorld + inset);
+                case 1:
+                    return new Vector3(Mathf.Clamp(along + sideJitter, -halfWorld, halfWorld), 0f, halfWorld - inset);
+                case 2:
+                    return new Vector3(-halfWorld + inset, 0f, Mathf.Clamp(along + sideJitter, -halfWorld, halfWorld));
+                default:
+                    return new Vector3(halfWorld - inset, 0f, Mathf.Clamp(along + sideJitter, -halfWorld, halfWorld));
+            }
+        }
+
+        private static GameObject InstantiateAuthoredTree(GameObject prefab, Transform parent, Vector3 point, float yawDegrees, float scale)
+        {
+            GameObject tree = Instantiate(prefab, point, Quaternion.Euler(0f, yawDegrees, 0f), parent);
+            tree.name = prefab.name;
+            tree.transform.localScale = Vector3.one * scale;
+            tree.isStatic = true;
+            ConfigureAuthoredTreeInstance(tree);
+            return tree;
         }
 
         private static void ConfigureAuthoredTreeInstance(GameObject tree)
