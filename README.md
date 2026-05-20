@@ -6,9 +6,14 @@ Unity 6 prototype for a procedural stylized valley.
 
 1. Open this folder with Unity `6000.4.7f1` or newer in the Unity 6 line.
 2. Let Unity restore packages, including `com.unity.inputsystem`.
-3. Use `Valendia > Create Prototype Scene`.
-4. Open `Assets/Valendia/ValendiaPrototype.unity`.
+3. Open `Assets/Valendia/ValendiaBootstrap.unity` for the lightweight build/runtime entry scene, or use `Valendia > Create Prototype Scene` to regenerate the local visualization scene.
+4. For editor visualization/setup, open `Assets/Valendia/ValendiaPrototype.unity`.
 5. Press Play.
+
+## Scene Roles
+
+- `Assets/Valendia/ValendiaBootstrap.unity` is the committed, lightweight source scene used for builds. It can look empty in Edit Mode because the world is generated at runtime when Play starts.
+- `Assets/Valendia/ValendiaPrototype.unity` is a generated local editor scene for visual inspection and iteration. It contains the generated world, is intentionally ignored by Git, and can be recreated with `Valendia > Create Prototype Scene`.
 
 ## Generated Artifacts
 

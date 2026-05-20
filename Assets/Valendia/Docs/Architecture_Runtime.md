@@ -10,14 +10,20 @@ La logique de generation est decoupee en fichiers `partial` par responsabilite. 
 
 - `ValendiaLandscapeGenerator.cs` : configuration serialisee, cycle Unity, orchestration de generation, API publique de sampling.
 - `ValendiaLandscapeGenerator.Terrain.cs` : chunks de terrain, foothold terrain, sous-meshs de biomes.
-- `ValendiaLandscapeGenerator.Composition.cs` : chemin, montagnes lointaines, bosquets auteurs, rubans floraux, nuages.
-- `ValendiaLandscapeGenerator.Scattering.cs` : distribution proceduralisee des arbres, rochers, herbes, fleurs, scrub et vegetation de bordure.
+- `ValendiaLandscapeGenerator.Composition.cs` : chemin, montagnes lointaines, rubans floraux, nuages.
+- `ValendiaLandscapeGenerator.Scattering.cs` : distribution proceduralisee des arbres authores Blender, rochers, herbes, fleurs, scrub et vegetation de bordure.
 - `ValendiaLandscapeGenerator.Sampling.cs` : hauteur, pente, chemin, biomes, couleurs de sol et points aleatoires.
-- `ValendiaLandscapeGenerator.Vegetation.cs` : arbres, patches de prairie, batches d'herbe et vegetation basse.
-- `ValendiaLandscapeGenerator.Geometry.cs` : rochers, canopees, nuages, helpers de rendu et LOD.
+- `ValendiaLandscapeGenerator.Vegetation.cs` : patches de prairie, batches d'herbe et vegetation basse.
+- `ValendiaLandscapeGenerator.Geometry.cs` : rochers, nuages, helpers de rendu et LOD.
 - `ValendiaLandscapeGenerator.Baking.cs` : combinaison des renderers statiques et nettoyage de hierarchie generee.
 - `ValendiaLandscapeGenerator.Meshes.cs` : factories de meshes proceduraux et primitives de triangles.
-- `ValendiaLandscapeGenerator.Materials.cs` : materiaux, textures de sol, atmosphere, skybox et lumiere.
+- `ValendiaLandscapeGenerator.Materials.cs` : materiaux, reutilisation/fallback des textures de sol, atmosphere, skybox et lumiere.
+
+## Scenes
+
+- `ValendiaBootstrap.unity` est la scene source versionnee et legere. Elle sert au build et au lancement runtime. En Edit Mode, elle peut sembler vide : le monde est genere au Play via `generateOnStart`.
+- `ValendiaPrototype.unity` est une scene locale generee pour la visualisation, le setup et les iterations dans l'editeur. Elle contient le monde deja genere, mais reste ignoree par Git car elle est lourde et reproductible.
+- Apres un clone, un nettoyage local ou une suppression accidentelle, regenerer la scene de visualisation avec `Valendia > Create Prototype Scene`.
 
 ## Regles De Modification
 
