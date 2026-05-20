@@ -39,6 +39,10 @@ namespace Valendia.Runtime
         [SerializeField, Min(0)] private int perimeterForestTreeCount = 1500;
         [SerializeField, Range(0.005f, 0.25f)] private float perimeterForestMinWidthRatio = 0.01f;
         [SerializeField, Range(0.01f, 0.25f)] private float perimeterForestMaxWidthRatio = 0.10f;
+        [SerializeField] private bool useTreeRuntimeLod = true;
+        [SerializeField, Range(0.01f, 0.3f)] private float treeLod0ScreenHeight = 0.085f;
+        [SerializeField, Range(0.005f, 0.2f)] private float treeLod1ScreenHeight = 0.032f;
+        [SerializeField, Range(0.001f, 0.1f)] private float treeLod2ScreenHeight = 0.004f;
         [SerializeField, Min(0)] private int meadowPatchCount = 2400;
         [SerializeField, Min(0)] private int flowerRibbonCount = 32;
         [SerializeField, Min(0)] private int pathEdgePatchCount = 2400;

@@ -130,6 +130,170 @@ namespace Valendia.Runtime
             return gameObject;
         }
 
+        private static readonly Vector3[] TreeLodCanopyOffsets =
+        {
+            new Vector3(-0.44f, 2.78f, -0.10f),
+            new Vector3(0.42f, 2.86f, 0.08f),
+            new Vector3(0.00f, 3.22f, 0.30f),
+            new Vector3(-0.05f, 3.46f, -0.24f)
+        };
+
+        private static readonly Vector3[] TreeLodCanopyScales =
+        {
+            new Vector3(1.18f, 0.76f, 0.92f),
+            new Vector3(1.12f, 0.82f, 0.98f),
+            new Vector3(1.34f, 0.84f, 1.06f),
+            new Vector3(1.02f, 0.72f, 0.88f)
+        };
+
+        private static readonly float[] TreeLodCanopyYaws = { 12f, 98f, 184f, 276f };
+        private static Mesh sharedTreeLodTrunkMesh;
+        private static Mesh sharedTreeLodCanopyMesh;
+        private static Mesh sharedTreeLodCanopyClusterMesh;
+
+        private static Mesh SharedTreeLodTrunkMesh
+        {
+            get
+            {
+                if (sharedTreeLodTrunkMesh == null)
+                {
+                    sharedTreeLodTrunkMesh = CreateTaperedPrismMesh("Shared Tree LOD Trunk", 7, 0.42f, 0.24f, 1f);
+                }
+
+                return sharedTreeLodTrunkMesh;
+            }
+        }
+
+        private static Mesh SharedTreeLodCanopyMesh
+        {
+            get
+            {
+                if (sharedTreeLodCanopyMesh == null)
+                {
+                    sharedTreeLodCanopyMesh = CreateLowPolyCanopyMesh("Shared Tree LOD Canopy", 8);
+                }
+
+                return sharedTreeLodCanopyMesh;
+            }
+        }
+
+        private static Mesh SharedTreeLodCanopyClusterMesh
+        {
+            get
+            {
+                if (sharedTreeLodCanopyClusterMesh == null)
+                {
+                    sharedTreeLodCanopyClusterMesh = CreateTreeLodCanopyClusterMesh();
+                }
+
+                return sharedTreeLodCanopyClusterMesh;
+            }
+        }
+
+        private static Mesh CreateTaperedPrismMesh(string meshName, int sides, float bottomRadius, float topRadius, float height)
+        {
+            List<Vector3> vertices = new List<Vector3>(sides * 2 + 2);
+            List<int> triangles = new List<int>(sides * 12);
+            float halfHeight = height * 0.5f;
+
+            for (int i = 0; i < sides; i++)
+            {
+                float angle = i / (float)sides * Mathf.PI * 2f;
+                vertices.Add(new Vector3(Mathf.Cos(angle) * bottomRadius, -halfHeight, Mathf.Sin(angle) * bottomRadius));
+                vertices.Add(new Vector3(Mathf.Cos(angle) * topRadius, halfHeight, Mathf.Sin(angle) * topRadius));
+            }
+
+            int bottomCenter = vertices.Count;
+            vertices.Add(new Vector3(0f, -halfHeight, 0f));
+            int topCenter = vertices.Count;
+            vertices.Add(new Vector3(0f, halfHeight, 0f));
+
+            for (int i = 0; i < sides; i++)
+            {
+                int next = (i + 1) % sides;
+                int bottom = i * 2;
+                int top = bottom + 1;
+                int nextBottom = next * 2;
+                int nextTop = nextBottom + 1;
+
+                triangles.Add(bottom);
+                triangles.Add(top);
+                triangles.Add(nextTop);
+                triangles.Add(bottom);
+                triangles.Add(nextTop);
+                triangles.Add(nextBottom);
+                triangles.Add(bottomCenter);
+                triangles.Add(nextBottom);
+                triangles.Add(bottom);
+                triangles.Add(topCenter);
+                triangles.Add(top);
+                triangles.Add(nextTop);
+            }
+
+            Mesh mesh = new Mesh { name = meshName };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static Mesh CreateLowPolyCanopyMesh(string meshName, int sides)
+        {
+            List<Vector3> vertices = new List<Vector3>(sides * 2 + 2);
+            List<int> triangles = new List<int>(sides * 6);
+            vertices.Add(new Vector3(0f, 0.54f, 0f));
+            vertices.Add(new Vector3(0f, -0.48f, 0f));
+
+            for (int i = 0; i < sides; i++)
+            {
+                float angle = i / (float)sides * Mathf.PI * 2f;
+                float radius = i % 2 == 0 ? 0.74f : 0.58f;
+                vertices.Add(new Vector3(Mathf.Cos(angle) * radius, Mathf.Lerp(-0.08f, 0.14f, i % 3 / 2f), Mathf.Sin(angle) * radius));
+            }
+
+            for (int i = 0; i < sides; i++)
+            {
+                int current = i + 2;
+                int next = ((i + 1) % sides) + 2;
+                triangles.Add(0);
+                triangles.Add(current);
+                triangles.Add(next);
+                triangles.Add(1);
+                triangles.Add(next);
+                triangles.Add(current);
+            }
+
+            Mesh mesh = new Mesh { name = meshName };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static Mesh CreateTreeLodCanopyClusterMesh()
+        {
+            CombineInstance[] combine = new CombineInstance[TreeLodCanopyOffsets.Length];
+            for (int i = 0; i < combine.Length; i++)
+            {
+                combine[i] = new CombineInstance
+                {
+                    mesh = SharedTreeLodCanopyMesh,
+                    transform = Matrix4x4.TRS(
+                        TreeLodCanopyOffsets[i],
+                        Quaternion.Euler(0f, TreeLodCanopyYaws[i], 0f),
+                        TreeLodCanopyScales[i])
+                };
+            }
+
+            Mesh mesh = new Mesh { name = "Shared Tree LOD Canopy Cluster" };
+            mesh.CombineMeshes(combine, true, true, false);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
         private static void ConfigureSoftVegetation(MeshRenderer renderer)
         {
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

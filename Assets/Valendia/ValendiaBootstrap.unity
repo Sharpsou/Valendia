@@ -178,6 +178,10 @@ MonoBehaviour:
   perimeterForestTreeCount: 1500
   perimeterForestMinWidthRatio: 0.01
   perimeterForestMaxWidthRatio: 0.1
+  useTreeRuntimeLod: 1
+  treeLod0ScreenHeight: 0.085
+  treeLod1ScreenHeight: 0.032
+  treeLod2ScreenHeight: 0.004
   meadowPatchCount: 2400
   flowerRibbonCount: 32
   pathEdgePatchCount: 2400

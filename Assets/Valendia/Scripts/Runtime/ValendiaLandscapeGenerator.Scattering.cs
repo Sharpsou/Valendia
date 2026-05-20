@@ -121,13 +121,14 @@ namespace Valendia.Runtime
             }
         }
 
-        private static GameObject InstantiateAuthoredTree(GameObject prefab, Transform parent, Vector3 point, float yawDegrees, float scale)
+        private GameObject InstantiateAuthoredTree(GameObject prefab, Transform parent, Vector3 point, float yawDegrees, float scale)
         {
             GameObject tree = Instantiate(prefab, point, Quaternion.Euler(0f, yawDegrees, 0f), parent);
             tree.name = prefab.name;
             tree.transform.localScale = Vector3.one * scale;
             tree.isStatic = true;
             ConfigureAuthoredTreeInstance(tree);
+            ConfigureTreeRuntimeLod(tree);
             return tree;
         }
 
@@ -153,6 +154,142 @@ namespace Valendia.Runtime
             collider.center = new Vector3(0f, 1.15f, 0f);
             collider.radius = 0.32f;
             collider.height = 2.3f;
+        }
+
+        private void ConfigureTreeRuntimeLod(GameObject tree)
+        {
+            if (!useTreeRuntimeLod || tree.GetComponent<LODGroup>() != null)
+            {
+                return;
+            }
+
+            MeshRenderer[] lod0Renderers = CreateCombinedTreeLod0Renderers(tree);
+            if (lod0Renderers.Length == 0)
+            {
+                return;
+            }
+
+            Material trunkMaterial = lod0Renderers[0].sharedMaterial;
+            Material canopyMaterial = lod0Renderers[lod0Renderers.Length - 1].sharedMaterial;
+            foreach (MeshRenderer renderer in lod0Renderers)
+            {
+                string materialName = renderer.sharedMaterial != null ? renderer.sharedMaterial.name.ToLowerInvariant() : string.Empty;
+                string rendererName = renderer.name.ToLowerInvariant();
+                if (rendererName.Contains("leaf") || rendererName.Contains("canopy") || materialName.Contains("leaf") || materialName.Contains("canopy"))
+                {
+                    canopyMaterial = renderer.sharedMaterial;
+                }
+                else if (rendererName.Contains("trunk") || rendererName.Contains("branch") || materialName.Contains("trunk") || materialName.Contains("bark"))
+                {
+                    trunkMaterial = renderer.sharedMaterial;
+                }
+            }
+
+            Renderer[] lod1Renderers = CreateTreeLodRenderers(tree.transform, "Runtime LOD1", trunkMaterial, canopyMaterial, 1f);
+            Renderer[] lod2Renderers = CreateTreeLodRenderers(tree.transform, "Runtime LOD2", trunkMaterial, canopyMaterial, 0.78f);
+
+            LODGroup lodGroup = tree.AddComponent<LODGroup>();
+            lodGroup.animateCrossFading = false;
+            lodGroup.SetLODs(new[]
+            {
+                new LOD(treeLod0ScreenHeight, lod0Renderers),
+                new LOD(treeLod1ScreenHeight, lod1Renderers),
+                new LOD(treeLod2ScreenHeight, lod2Renderers)
+            });
+            lodGroup.RecalculateBounds();
+        }
+
+        private static MeshRenderer[] CreateCombinedTreeLod0Renderers(GameObject tree)
+        {
+            MeshRenderer[] sourceRenderers = tree.GetComponentsInChildren<MeshRenderer>(true);
+            Dictionary<Material, List<CombineInstance>> groups = new Dictionary<Material, List<CombineInstance>>();
+            Matrix4x4 rootMatrix = tree.transform.worldToLocalMatrix;
+
+            foreach (MeshRenderer renderer in sourceRenderers)
+            {
+                MeshFilter filter = renderer.GetComponent<MeshFilter>();
+                if (filter == null || filter.sharedMesh == null)
+                {
+                    continue;
+                }
+
+                Material[] materials = renderer.sharedMaterials;
+                int subMeshCount = Mathf.Min(filter.sharedMesh.subMeshCount, materials.Length);
+                for (int subMesh = 0; subMesh < subMeshCount; subMesh++)
+                {
+                    Material material = materials[subMesh];
+                    if (material == null)
+                    {
+                        continue;
+                    }
+
+                    if (!groups.TryGetValue(material, out List<CombineInstance> combine))
+                    {
+                        combine = new List<CombineInstance>(32);
+                        groups.Add(material, combine);
+                    }
+
+                    combine.Add(new CombineInstance
+                    {
+                        mesh = filter.sharedMesh,
+                        subMeshIndex = subMesh,
+                        transform = rootMatrix * renderer.transform.localToWorldMatrix
+                    });
+                }
+            }
+
+            if (groups.Count == 0)
+            {
+                return sourceRenderers;
+            }
+
+            foreach (MeshRenderer renderer in sourceRenderers)
+            {
+                MeshFilter filter = renderer.GetComponent<MeshFilter>();
+                DestroyUnityObject(renderer);
+                DestroyUnityObject(filter);
+            }
+
+            List<MeshRenderer> combinedRenderers = new List<MeshRenderer>(groups.Count);
+            foreach (KeyValuePair<Material, List<CombineInstance>> group in groups)
+            {
+                Mesh mesh = new Mesh { name = $"{group.Key.name} Tree LOD0 Combined Mesh" };
+                mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                mesh.CombineMeshes(group.Value.ToArray(), true, true, false);
+                mesh.RecalculateBounds();
+
+                GameObject combined = CreateMeshObject($"{group.Key.name} Runtime LOD0 Combined", mesh, group.Key, tree.transform);
+                combined.isStatic = true;
+                MeshRenderer renderer = combined.GetComponent<MeshRenderer>();
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                renderer.receiveShadows = true;
+                combinedRenderers.Add(renderer);
+            }
+
+            return combinedRenderers.ToArray();
+        }
+
+        private static Renderer[] CreateTreeLodRenderers(Transform parent, string prefix, Material trunkMaterial, Material canopyMaterial, float canopyScale)
+        {
+            List<Renderer> renderers = new List<Renderer>(2);
+            GameObject trunk = CreateMeshObject($"{prefix} Trunk", SharedTreeLodTrunkMesh, trunkMaterial, parent);
+            trunk.transform.localPosition = new Vector3(0f, 1.05f, 0f);
+            trunk.transform.localScale = new Vector3(0.42f, 1.88f, 0.42f);
+            trunk.isStatic = true;
+            MeshRenderer trunkRenderer = trunk.GetComponent<MeshRenderer>();
+            trunkRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trunkRenderer.receiveShadows = true;
+            renderers.Add(trunkRenderer);
+
+            GameObject canopy = CreateMeshObject($"{prefix} Canopy", SharedTreeLodCanopyClusterMesh, canopyMaterial, parent);
+            canopy.transform.localScale = Vector3.one * canopyScale;
+            canopy.isStatic = true;
+            MeshRenderer canopyRenderer = canopy.GetComponent<MeshRenderer>();
+            canopyRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            canopyRenderer.receiveShadows = true;
+            renderers.Add(canopyRenderer);
+
+            return renderers.ToArray();
         }
 
         private void ScatterMeadowPatches()

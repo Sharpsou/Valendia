@@ -57,6 +57,8 @@ Manual path:
 - `authoredTreePrefabCount`: 520 in the current DA validation scene, distributed from the 5 imported Blender oak variants.
 - `perimeterForestTreeCount`: 1500 adds a denser continuous authored-tree forest ring around the map.
 - `perimeterForestMinWidthRatio` / `perimeterForestMaxWidthRatio`: 0.01 to 0.10, so the forest occupies a 7.2-72 unit band on the current 720 unit map and reaches close to the border walls.
+- `useTreeRuntimeLod`: keep enabled. Trees remain present and collidable for exploration, but rendering switches from full Blender meshes near the player to lightweight low-poly silhouettes in the distance.
+- `treeLod0ScreenHeight` / `treeLod1ScreenHeight` / `treeLod2ScreenHeight`: 0.085 / 0.032 / 0.004; tune visually if the pop between authored trees and simplified distant trees becomes noticeable.
 - `grassTuftCount`: 360000 in the current DA validation scene, split into material and spatial batches so the path-edge density now reads across the whole map.
 - `heightScale`: 30, `distantMountainStrength`: 0.12, `borderMountainWallStrength`: 0.18, and `distantSpireCount`: 64 keep the valley soft while closing the horizon with overlapping mountain accents and sealed corner massifs, without adding a continuous wall surface.
 - `borderVegetationClusterCount`: 144 keeps the mountain-scrub border from thinning out by adding clustered rocks, scrub, meadow strokes, and grass along all four edges.
