@@ -34,8 +34,11 @@ namespace Valendia.Runtime
         [SerializeField] private bool generateAuthoredTreePrefabs = true;
         [SerializeField, Min(0)] private int authoredTreePrefabCount = 520;
         [SerializeField] private GameObject[] authoredTreePrefabs = Array.Empty<GameObject>();
+        [SerializeField] private GameObject[] authoredTreeMidPrefabs = Array.Empty<GameObject>();
+        [SerializeField] private GameObject[] authoredTreeHlodPrefabs = Array.Empty<GameObject>();
         [SerializeField] private bool generatePerimeterForest = true;
         [SerializeField, Min(0)] private int perimeterForestTreeCount = 1500;
+        [SerializeField] private bool enableTreeHlodPrototype = true;
         [SerializeField, Range(0.005f, 0.25f)] private float perimeterForestMinWidthRatio = 0.01f;
         [SerializeField, Range(0.01f, 0.25f)] private float perimeterForestMaxWidthRatio = 0.10f;
         [SerializeField, Min(0)] private int meadowPatchCount = 2400;
@@ -87,6 +90,8 @@ namespace Valendia.Runtime
         private const float GrassLod0ScreenHeight = 0.095f;
         private const float GrassLod1ScreenHeight = 0.046f;
         private const float GrassLod2ScreenHeight = 0.001f;
+        private const float OptimizedShadowDistance = 180f;
+        private const int OptimizedShadowCascades = 2;
 
         private Transform generatedRoot;
         private Transform meadowBatchRoot;
@@ -215,8 +220,17 @@ namespace Valendia.Runtime
             ScatterMeadowPatches();
             GenerateDistantSpires();
             ScatterRocks();
+            if (enableTreeHlodPrototype)
+            {
+                BeginTreeHlod();
+            }
+
             ScatterAuthoredTreePrefabs();
             ScatterPerimeterForest();
+            if (enableTreeHlodPrototype)
+            {
+                FinalizeTreeHlod();
+            }
             GenerateFlowerRibbons();
             ScatterGrass();
             ScatterFlowerPatches();
@@ -276,9 +290,18 @@ namespace Valendia.Runtime
                 ScatterBorderVegetation();
             }
 
-            if (generatedRoot.Find("Perimeter Forest Ring") == null)
+            if (generatedRoot.Find("Tree HLOD Cells") == null && generatedRoot.Find("Perimeter Forest Ring") == null)
             {
+                if (enableTreeHlodPrototype)
+                {
+                    BeginTreeHlod();
+                }
+
                 ScatterPerimeterForest();
+                if (enableTreeHlodPrototype)
+                {
+                    FinalizeTreeHlod();
+                }
             }
 
             if (generatedRoot.Find("Baked Static Renderers") == null)
