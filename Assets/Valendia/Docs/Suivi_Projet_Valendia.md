@@ -12,7 +12,7 @@ Direction artistique visee :
 - rendu medium-poly / low-poly soigne, pas photorealiste ;
 - reliefs montagneux clairs et silhouettes fortes en arriere-plan ;
 - vegetation dense : herbes, touffes, arbres colores, rochers ;
-- chemin naturel qui guide l'exploration sans transformer la scene en couloir.
+- vallee ouverte qui guide l'exploration par relief, clairieres et silhouettes plutot que par un chemin trace.
 
 ## References Visuelles
 
@@ -26,7 +26,7 @@ Synthese DA :
 
 - garder la densite d'herbe et de vegetation ;
 - privilegier les formes simples et facettees ;
-- utiliser des masses colorees distinctes pour herbe, chemin, rochers, feuillages ;
+- utiliser des masses colorees distinctes pour herbe, rochers, feuillages et fleurs ;
 - eviter le detail fin realiste au profit de silhouettes fortes.
 
 ## Etat Actuel
@@ -66,11 +66,11 @@ Fonctions presentes :
 - generation de terrain en chunks ;
 - mesh terrain medium-poly ;
 - relief par bruit Perlin multi-octaves ;
-- micro-relief de sol tres faible, masque sur le chemin et calme en bord de carte pour eviter les vallons parasites ;
+- micro-relief de sol tres faible, calme dans le fond de vallee et en bord de carte pour eviter les vallons parasites ;
 - textures/normal maps procedurales legeres appliquees aux materiaux de sol pour casser l'effet trop lisse sans ajouter de GameObjects ;
 - montagnes renforcees en peripherie ;
-- chemin sinueux aplani ;
-- ruban de chemin separe du terrain ;
+- vallee continue sans chemin visible ;
+- ligne de composition invisible pour placer les vues et les masses florales sans tracer de route ;
 - sous-meshs de terrain distincts pour prairie, bosquet d'automne, herbes dorees, champ lavande et scrub de montagne ;
 - dispersion de rochers, arbres authores Blender, touffes d'herbe, fleurs lavande et scrub ;
 - arbres remplaces par 5 variantes Blender importees en FBX, rangees dans `Assets/Valendia/Art/Environment/Trees/Exports/FBX` avec source `.blend` dans `SourceAssets/Valendia/Art/Environment/Trees/Blender` ;
@@ -80,15 +80,15 @@ Fonctions presentes :
 - herbe densifiee avec des touffes multi-brins double face, plus larges et plus nombreuses ;
 - fleurs lavande regroupees en patchs plus visibles ;
 - nappes de prairie/fleurs ajoutees sous forme de patches bas au sol pour eviter une densite seulement faite de petits traits ;
-- vegetation speciale le long des bords du chemin pour renforcer la premiere lecture en camera joueur ;
+- vegetation speciale de premier plan pour renforcer la premiere lecture en camera joueur ;
 - rubans floraux larges pour rapprocher les masses de vegetation de `img_DA/img2.jpg` ;
-- ruban de chemin lisse separe du terrain pour eviter les gros triangles visibles au premier plan ;
+- details de prairie batchee au premier plan pour eviter une lecture trop plate ;
 - nuages stylises low-poly et skybox cyan ;
 - bancs de nuages horizontaux plus illustratifs ;
 - massifs calcaires lointains plus etages, moins coniques ;
-- vegetation evitee sur le chemin ;
+- vegetation repartie par pente, fertilite et biomes plutot que par exclusion de chemin ;
 - placement limite des arbres selon pente et fertilite ;
-- palette terrain/feuillage/chemin recalibree vers des verts, terres et calcaires moins pastel ;
+- palette terrain/feuillage recalibree vers des verts, terres, fleurs et calcaires moins pastel ;
 - herbe, fleurs et feuillages configures pour recevoir/produire davantage d'ombres sans retour des anciens artefacts noirs.
 
 Intention technique :
@@ -146,12 +146,12 @@ La scene locale de visualisation contient :
 
 Derniere passe visuelle :
 
-- `grassTuftCount` porte a 360000 pour appliquer la densite forte du bord du chemin a toute la carte ;
-- `pathEdgePatchCount` porte a 2400 pour densifier les bords du chemin en premiere personne ;
+- `grassTuftCount` porte a 360000 pour appliquer une forte densite de prairie a toute la carte ;
+- `foregroundMeadowDetailCount` porte a 2400 pour densifier le premier plan et les clairieres sans tracer de chemin ;
 - correction de la passe ratee : suppression des accents de sol batches qui creaient des intersections de polygones ;
 - suppression du micro-relief ajoute qui creait trop de vallons ;
 - `heightScale` abaisse a 30 et `distantMountainStrength` a 0.12 pour revenir a un relief doux type `img_DA/img2.jpg` ;
-- chemin rendu quasi non destructif dans la topographie pour eviter les parois trop proches ;
+- suppression du chemin visible et de son effet de terrassement pour retrouver une vallee continue ;
 - `meadowPatchCount` stabilise a 2400, `flowerPatchCount` a 680 et `flowerRibbonCount` a 32 ;
 - remplacement final des arbres proceduraux par les 5 variantes de chene Blender (`broad`, `tall`, `core`, `low`, `slim`) ;
 - les variantes Blender gardent une ramification repartie autour du tronc, des boules de feuillage volumineuses et une echelle globale agrandie pour mieux coller a la DA ;
@@ -160,9 +160,9 @@ Derniere passe visuelle :
 - lumiere directionnelle de fin d'apres-midi : soleil plus bas, chaud, avec ombres plus marquees et ambiante reduite ;
 - repartition des biomes ajustee pour eviter le retour du grand tapis mauve ou jaune uniforme : le sol reste vert/olive neutre, les zones dorees et lavande passent par les brins d'herbe et fleurs ;
 - suppression des anciens placages couleur `Painterly Meadow Patch` : remplaces par des lots spatiaux `Organic Meadow Grass Batches` composes de strokes/brins verticaux, plus organiques et plus compatibles performance ;
-- variantes d'herbe vert frais, olive, dore et rose/lavande appliquees aux lots globaux, aux bords de chemin et aux bords de carte ;
+- variantes d'herbe vert frais, olive, dore et rose/lavande appliquees aux lots globaux, aux clairieres organiques et aux bords de carte ;
 - arbres ajustes vers `img_DA/img2.jpg` via Blender plutot que par code procedural ; l'ancien pipeline d'arbres code a ete supprime pour garder un seul flux clair ;
-- passe sol prudente : ajout d'un micro-relief de 12 cm max environ, attenue sur le chemin, plus texture organique et normal map 128x128 tuilees sur les materiaux de terrain sans toucher au ruban de chemin ;
+- passe sol prudente : ajout d'un micro-relief de 12 cm max environ, calme dans le fond de vallee et plus texture organique/normal map 128x128 tuilees sur les materiaux de terrain ;
 - ajout d'un anneau visible de terrain de foothold avec `MeshCollider` pour prolonger le sol jouable jusqu'a la base des montagnes, sans barriere invisible ;
 - validation batch du foothold : 8 patches de terrain supplementaires, `MeshCollider` terrain passes a 24, le joueur ne doit plus tomber entre le bord de map et les montagnes ;
 - preview regeneree apres chaque passe couleur, derniere image de controle dans `Assets/Valendia/Docs/ValendiaPrototypePreview.png`.
@@ -172,7 +172,7 @@ Passe performance :
 - le generateur expose deux profils : `HighVisual` pour la densite complete et `PlayableOptimized` par defaut pour une scene plus jouable ;
 - l'herbe principale n'est plus generee en dizaines de milliers de GameObjects individuels ;
 - les touffes d'herbe sont maintenant regroupees en lots spatiaux par palette (`Fresh/Olive/Golden/Rose Grass Batch`) pour reduire la charge CPU, les draw calls et la taille scene ;
-- l'herbe des bords de chemin est aussi batchee (`Path Edge Grass Batch`) ;
+- l'herbe de premier plan et des clairieres est aussi batchee (`Foreground Grass Batch`) ;
 - les lots d'herbe et strokes de prairie utilisent des `LODGroup` Unity avec meshes dense, moyen et leger ; le niveau suit donc la camera/joueur au runtime ;
 - les seuils LOD de l'herbe basculent plus tot en profil optimise, avec 90% de la densite d'herbe authoree pour reduire le cout sans vider le premier plan ;
 - le profil optimise applique une cible runtime 1280x800 ;
@@ -221,7 +221,7 @@ Cette decision evite de versionner une scene procedurale d'environ 1,3 Go et gar
    - nuages avec contours moins polygonaux.
 4. Ajuster le seed, les densites et les couleurs apres validation visuelle dans l'editeur et dans la preview.
 5. Optimiser la vegetation avec GPU instancing ou indirect rendering si les `LODGroup` d'herbe restent trop couteux.
-6. Ajouter des points d'interet visibles depuis le chemin.
+6. Ajouter des points d'interet visibles depuis les clairieres et les lignes de vue naturelles.
 
 ## Definition Du Premier Jalonnement
 
@@ -230,6 +230,6 @@ Le premier jalonnement est atteint quand :
 - Unity ouvre une scene Valendia jouable ;
 - le joueur peut explorer en premiere personne a la manette ;
 - le terrain est assez grand pour marcher plusieurs minutes ;
-- le chemin, les montagnes, les rochers, l'herbe dense et les arbres stylises sont visibles ;
+- les montagnes, les rochers, l'herbe dense, les fleurs et les arbres stylises sont visibles ;
 - le rendu evoque clairement les references `img_DA` ;
 - le monde peut etre regenere par seed puis fixe.

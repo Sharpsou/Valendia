@@ -33,14 +33,8 @@ namespace Valendia.Runtime
             float wallMask = Mathf.SmoothStep(0.76f, 1.03f, radial);
             float mountainWall = Mathf.Lerp(0.72f, 1.18f, ringNoise) * heightScale * wallMask * borderMountainWallStrength;
 
-            float pathCenter = PathCenterX(z);
-            float pathDistance = Mathf.Abs(x - pathCenter);
-            float pathBlend = 1f - Mathf.SmoothStep(pathWidth * 0.5f, pathWidth * 1.8f, pathDistance);
-            float baseHeight = rolling + mountains + mountainWall;
-            float pathHeight = rolling * 0.96f + mountains * 0.62f + mountainWall * 0.72f;
-            float height = Mathf.Lerp(baseHeight, pathHeight, pathBlend * 0.36f);
-
-            return height + GroundMicroReliefAt(x, z, pathDistance);
+            float height = rolling + mountains + mountainWall;
+            return height + GroundMicroReliefAt(x, z);
         }
 
         private float SlopeAt(float x, float z)
@@ -51,33 +45,28 @@ namespace Valendia.Runtime
             return Mathf.Atan(Mathf.Max(dx, dz) / (step * 2f)) * Mathf.Rad2Deg;
         }
 
-        private float GroundMicroReliefAt(float x, float z, float pathDistance)
+        private float GroundMicroReliefAt(float x, float z)
         {
             if (terrainMicroReliefStrength <= 0f)
             {
                 return 0f;
             }
 
-            float pathMask = Mathf.SmoothStep(pathWidth * 0.85f, pathWidth * 2.15f, pathDistance);
             float radial = new Vector2(x, z).magnitude / (WorldSize * 0.5f);
             float ridgeCalm = Mathf.Lerp(1f, 0.45f, Mathf.SmoothStep(0.68f, 0.96f, radial));
+            float valleyCalm = Mathf.Lerp(0.78f, 1f, Mathf.SmoothStep(0.18f, 0.78f, radial));
             float scale = Mathf.Max(4f, terrainMicroReliefScale);
             float broad = Mathf.PerlinNoise((x + seed * 0.31f) / scale, (z - seed * 0.19f) / scale);
             float fine = Mathf.PerlinNoise((x - seed * 0.43f) / (scale * 0.48f), (z + seed * 0.27f) / (scale * 0.48f));
             float broken = Mathf.PerlinNoise((x + seed * 0.07f) / (scale * 1.9f), (z + seed * 0.11f) / (scale * 1.9f));
             float detail = (broad * 0.55f + fine * 0.30f + broken * 0.15f - 0.5f) * 2f;
 
-            return detail * terrainMicroReliefStrength * pathMask * ridgeCalm;
+            return detail * terrainMicroReliefStrength * ridgeCalm * valleyCalm;
         }
 
-        private float PathCenterX(float z)
+        private float ValleyFlowCenterX(float z)
         {
             return Mathf.Sin((z + seed) * 0.012f) * WorldSize * 0.16f + Mathf.Sin((z - seed) * 0.027f) * WorldSize * 0.045f;
-        }
-
-        private bool IsOnPath(float x, float z, float radius)
-        {
-            return Mathf.Abs(x - PathCenterX(z)) <= radius;
         }
 
         private Biome BiomeAt(float x, float z)
@@ -141,9 +130,7 @@ namespace Valendia.Runtime
 
         private Color GroundVertexColorAt(float x, float z, Biome biome)
         {
-            Color baseColor = IsOnPath(x, z, pathWidth * 0.5f)
-                ? new Color(0.61f, 0.53f, 0.36f)
-                : BiomeGroundColor(biome);
+            Color baseColor = BiomeGroundColor(biome);
 
             float moss = Mathf.PerlinNoise((x + seed * 0.61f) * 0.038f, (z - seed * 0.52f) * 0.038f);
             float soil = Mathf.PerlinNoise((x - seed * 0.21f) * 0.092f, (z + seed * 0.73f) * 0.092f);

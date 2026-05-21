@@ -88,8 +88,8 @@ namespace Valendia.Editor
             ValendiaLandscapeGenerator generator = Object.FindAnyObjectByType<ValendiaLandscapeGenerator>();
             if (generator != null)
             {
-                Vector3 cameraPoint = generator.GetPathPoint(0.26f, 6.4f);
-                Vector3 lookPoint = generator.GetPathPoint(0.72f, 7.2f) + new Vector3(22f, 0f, 0f);
+                Vector3 cameraPoint = generator.GetScenicPoint(0.26f, 6.4f);
+                Vector3 lookPoint = generator.GetScenicPoint(0.72f, 7.2f) + new Vector3(22f, 0f, 0f);
                 camera.transform.position = cameraPoint;
                 camera.transform.rotation = Quaternion.LookRotation(lookPoint - cameraPoint, Vector3.up);
             }
@@ -141,9 +141,9 @@ namespace Valendia.Editor
             string stamp = System.DateTime.Now.ToString("yyyyMMdd-HHmmss");
             RenderPreview(
                 camera,
-                generator.GetPathPoint(0.26f, 6.4f),
-                generator.GetPathPoint(0.72f, 7.2f) + new Vector3(22f, 0f, 0f),
-                $"Assets/Valendia/Docs/ValendiaPreview_path_{stamp}.png");
+                generator.GetScenicPoint(0.26f, 6.4f),
+                generator.GetScenicPoint(0.72f, 7.2f) + new Vector3(22f, 0f, 0f),
+                $"Assets/Valendia/Docs/ValendiaPreview_valley_{stamp}.png");
             RenderPreview(
                 camera,
                 new Vector3(-WorldHalf(generator) * 0.72f, generator.SampleHeight(-WorldHalf(generator) * 0.72f, 0f) + 88f, -WorldHalf(generator) * 0.18f),
@@ -266,7 +266,6 @@ namespace Valendia.Editor
             SetMaterial(serializedGenerator, "goldenGrassGroundMaterial", EnsureGroundMaterial("Valendia Golden Grass Ground", new Color(0.48f, 0.54f, 0.32f), 0.18f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength));
             SetMaterial(serializedGenerator, "lavenderGroundMaterial", EnsureGroundMaterial("Valendia Lavender Field Ground", new Color(0.34f, 0.52f, 0.42f), 0.18f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling, groundNormalStrength));
             SetMaterial(serializedGenerator, "scrubGroundMaterial", EnsureGroundMaterial("Valendia Mountain Scrub Ground", new Color(0.32f, 0.42f, 0.30f), 0.2f, true, groundDetailTexture, groundNormalTexture, groundTextureTiling * 0.85f, groundNormalStrength * 0.75f));
-            SetMaterial(serializedGenerator, "pathMaterial", EnsureLitMaterial("Valendia Warm Dust Path", new Color(0.56f, 0.39f, 0.22f), 0.28f, true));
             SetMaterial(serializedGenerator, "meadowMaterial", EnsureLitMaterial("Valendia Meadow Brush", new Color(0.22f, 0.50f, 0.30f), 0.16f, true));
             SetMaterial(serializedGenerator, "goldenMeadowMaterial", EnsureLitMaterial("Valendia Golden Meadow Brush", new Color(0.50f, 0.50f, 0.24f), 0.16f, true));
             SetMaterial(serializedGenerator, "lavenderMeadowMaterial", EnsureLitMaterial("Valendia Lavender Meadow Brush", new Color(0.58f, 0.38f, 0.58f), 0.16f, true));
@@ -534,7 +533,7 @@ namespace Valendia.Editor
 
         private static void CreatePlayer(ValendiaLandscapeGenerator generator)
         {
-            Vector3 spawn = FindScenicPathPoint(generator, 1.1f);
+            Vector3 spawn = FindScenicPoint(generator, 1.1f);
 
             GameObject player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             player.name = "Valendia Player";
@@ -571,15 +570,15 @@ namespace Valendia.Editor
             serializedController.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static Vector3 FindScenicPathPoint(ValendiaLandscapeGenerator generator, float heightOffset)
+        private static Vector3 FindScenicPoint(ValendiaLandscapeGenerator generator, float heightOffset)
         {
-            Vector3 best = generator.GetPathPoint(0.42f, heightOffset);
+            Vector3 best = generator.GetScenicPoint(0.42f, heightOffset);
             float bestScore = float.PositiveInfinity;
 
             for (int i = 0; i <= 28; i++)
             {
                 float t = Mathf.Lerp(0.18f, 0.78f, i / 28f);
-                Vector3 point = generator.GetPathPoint(t, heightOffset);
+                Vector3 point = generator.GetScenicPoint(t, heightOffset);
                 float centerBias = Mathf.Abs(t - 0.46f) * 30f;
                 float score = point.y + centerBias;
                 if (score < bestScore)

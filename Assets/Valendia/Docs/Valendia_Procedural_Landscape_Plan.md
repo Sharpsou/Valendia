@@ -4,8 +4,8 @@
 
 - Large explorable valley with pale limestone mountains and distant ridges.
 - Medium-poly readability: faceted terrain silhouettes, authored Blender tree crowns, clear material blocks.
-- Dense grass and vegetation retained from `img_DA`, with a deliberately heavy prototype pass around the path so the first-person view reads as a real meadow rather than isolated tufts.
-- A winding path acts as the first navigation spine for a first-person prototype.
+- Dense grass and vegetation retained from `img_DA`, with a deliberately heavy foreground meadow pass so the first-person view reads as a real meadow rather than isolated tufts.
+- A soft invisible valley flow guides composition and preview placement without drawing a road through the map.
 - Biome patches create the first Valendia identity layer: autumn groves, golden grass, lavender fields, and mountain scrub.
 - Sky, cloud shapes, warm low sun, distant limestone spires, green meadow masses, olive/golden grass accents, and sparse violet floral strokes support the same stylized fantasy-valley mood as the references.
 
@@ -14,8 +14,8 @@
 1. Generate deterministically from a seed.
 2. Build terrain in square mesh chunks so the scene can scale without one giant mesh.
 3. Use layered Perlin noise for rolling hills and a radial ridge mask for distant mountains.
-4. Add a bounded micro-relief pass for ground texture, masked near the path and softened near the horizon ridges.
-5. Flatten and clear a sinusoidal path through the valley.
+4. Add a bounded micro-relief pass for ground texture, softened in the valley floor and near the horizon ridges.
+5. Preserve an open, explorable valley floor through slope, biome, and foreground meadow placement instead of a visible path.
 6. Assign visible terrain materials from deterministic biome masks and procedural detail/normal textures.
 7. Scatter faceted rocks, authored Blender tree variants, dense grass clumps, lavender flowers, and scrub from seeded random streams.
 8. Keep authored tree source files in Blender and import Unity-ready FBX variants rather than maintaining a second procedural tree pipeline.
@@ -57,7 +57,7 @@ Manual path:
 - `authoredTreePrefabCount`: 520 in the current DA validation scene, distributed from the 5 imported Blender oak variants.
 - `perimeterForestTreeCount`: 1500 adds a denser continuous authored-tree forest ring around the map.
 - `perimeterForestMinWidthRatio` / `perimeterForestMaxWidthRatio`: 0.01 to 0.10, so the forest occupies a 7.2-72 unit band on the current 720 unit map and reaches close to the border walls.
-- `grassTuftCount`: 360000 in the current DA validation scene, split into material and spatial batches so the path-edge density now reads across the whole map.
+- `grassTuftCount`: 360000 in the current DA validation scene, split into material and spatial batches so meadow density reads across the whole map.
 - `heightScale`: 30, `distantMountainStrength`: 0.12, `borderMountainWallStrength`: 0.18, and `distantSpireCount`: 64 keep the valley soft while closing the horizon with overlapping mountain accents and sealed corner massifs, without adding a continuous wall surface.
 - `borderVegetationClusterCount`: 144 keeps the mountain-scrub border from thinning out by adding clustered rocks, scrub, meadow strokes, and grass along all four edges.
 - `qualityProfile`: `PlayableOptimized` is the default runtime profile; `HighVisual` keeps the full authoring density for comparison.
@@ -72,9 +72,9 @@ Manual path:
 ## Current Performance Pass
 
 - Main grass tufts are merged into spatial mesh chunks instead of individual GameObjects.
-- Path-edge grass is merged into dedicated batches.
+- Foreground meadow grass is merged into dedicated batches.
 - Organic meadow color accents are also rendered as batched grass strokes instead of flat ground overlays.
-- Grass and meadow batches use Unity `LODGroup` components with dense, medium, and light meshes, so detail follows the player camera instead of the path. `PlayableOptimized` switches grass LODs earlier and uses 90% of the authored grass count so close-range density remains visually stable while far-field cost drops.
+- Grass and meadow batches use Unity `LODGroup` components with dense, medium, and light meshes, so detail follows the player camera instead of any authored route. `PlayableOptimized` switches grass LODs earlier and uses 90% of the authored grass count so close-range density remains visually stable while far-field cost drops.
 - `PlayableOptimized` applies a runtime 1280x800 resolution target for a lighter default play profile.
 - Decorative static meshes are baked by material and shadow mode after generation, reducing active renderers while preserving collision. Grass batches stay out of this bake so their `LODGroup` can work at runtime.
 - Tree, rock, terrain, and mountain colliders remain present in both quality profiles so free exploration works across the whole map.

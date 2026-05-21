@@ -14,8 +14,6 @@ namespace Valendia.Runtime
             if (goldenGrassGroundMaterial == null) goldenGrassGroundMaterial = CreateMaterial("Valendia Golden Grass Ground", new Color(0.48f, 0.54f, 0.32f), 0.18f);
             if (lavenderGroundMaterial == null) lavenderGroundMaterial = CreateMaterial("Valendia Lavender Field Ground", new Color(0.34f, 0.52f, 0.42f), 0.18f);
             if (scrubGroundMaterial == null) scrubGroundMaterial = CreateMaterial("Valendia Mountain Scrub Ground", new Color(0.32f, 0.42f, 0.30f), 0.2f);
-            if (pathMaterial == null) pathMaterial = CreateMaterial("Valendia Warm Dust Path", new Color(0.56f, 0.39f, 0.22f), 0.28f);
-            if (pathMaterial != null && pathMaterial.HasProperty("_Cull")) pathMaterial.SetFloat("_Cull", 0f);
             if (grassMaterial == null) grassMaterial = CreateMaterial("Valendia Fresh Green Grass Blades", new Color(0.34f, 0.62f, 0.34f), 0.2f);
             if (oliveGrassMaterial == null) oliveGrassMaterial = CreateMaterial("Valendia Olive Grass Blades", new Color(0.28f, 0.44f, 0.25f), 0.22f);
             if (goldenGrassBladeMaterial == null) goldenGrassBladeMaterial = CreateMaterial("Valendia Golden Straw Grass Blades", new Color(0.72f, 0.60f, 0.25f), 0.18f);

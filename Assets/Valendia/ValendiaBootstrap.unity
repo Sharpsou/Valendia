@@ -162,8 +162,6 @@ MonoBehaviour:
   groundTextureStrength: 0.28
   groundTextureTiling: 42
   groundNormalStrength: 0.18
-  pathWidth: 12
-  pathVegetationClearance: 8
   distantMountainStrength: 0.12
   borderMountainWallStrength: 0.18
   generateAuthoredTreePrefabs: 1
@@ -180,7 +178,7 @@ MonoBehaviour:
   perimeterForestMaxWidthRatio: 0.1
   meadowPatchCount: 2400
   flowerRibbonCount: 32
-  pathEdgePatchCount: 2400
+  foregroundMeadowDetailCount: 2400
   grassTuftCount: 360000
   rockCount: 260
   flowerPatchCount: 680
@@ -199,7 +197,6 @@ MonoBehaviour:
   goldenGrassGroundMaterial: {fileID: 2100000, guid: 531bed9fcf0200e40b58f27d1cafe443, type: 2}
   lavenderGroundMaterial: {fileID: 2100000, guid: 042b1f11c4158c94fab106acfedd41ed, type: 2}
   scrubGroundMaterial: {fileID: 2100000, guid: a4075cf73caf5f24c81d55c81522e78c, type: 2}
-  pathMaterial: {fileID: 2100000, guid: 9ca248460a09d0b438c11d9829daf6d7, type: 2}
   meadowMaterial: {fileID: 2100000, guid: 1212100ba9278e0458d95e8d61ee4552, type: 2}
   goldenMeadowMaterial: {fileID: 2100000, guid: 51a29a07c724cdb4c8bf38779ddb1b28, type: 2}
   lavenderMeadowMaterial: {fileID: 2100000, guid: fdc69ede5b3997241a2a5cd999b7a6fa, type: 2}

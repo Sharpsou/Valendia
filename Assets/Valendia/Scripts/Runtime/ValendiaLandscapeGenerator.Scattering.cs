@@ -21,11 +21,6 @@ namespace Valendia.Runtime
             for (int i = 0; i < attempts && placed < authoredTreePrefabCount; i++)
             {
                 Vector3 point = RandomPoint(random);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance))
-                {
-                    continue;
-                }
-
                 float slope = SlopeAt(point.x, point.z);
                 float fertility = Mathf.PerlinNoise((point.x + seed * 0.83f) * 0.011f, (point.z - seed * 0.71f) * 0.011f);
                 if (slope > maxTreeSlope || fertility < 0.36f)
@@ -69,11 +64,6 @@ namespace Valendia.Runtime
             for (int attempt = 0; attempt < attempts && placed < perimeterForestTreeCount; attempt++)
             {
                 Vector3 point = PerimeterForestPoint(random, halfWorld, minInset, maxInset);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance * 1.35f))
-                {
-                    continue;
-                }
-
                 float slope = SlopeAt(point.x, point.z);
                 float forestNoise = Mathf.PerlinNoise((point.x + seed * 0.53f) * 0.018f, (point.z - seed * 0.47f) * 0.018f);
                 if (slope > maxTreeSlope + 8f || forestNoise < 0.08f)
@@ -166,11 +156,6 @@ namespace Valendia.Runtime
             for (int i = 0; i < attempts && placed < targetCount; i++)
             {
                 Vector3 point = RandomPoint(random);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.2f))
-                {
-                    continue;
-                }
-
                 if (SlopeAt(point.x, point.z) > 20f)
                 {
                     continue;
@@ -199,11 +184,6 @@ namespace Valendia.Runtime
             for (int i = 0; i < targetCount; i++)
             {
                 Vector3 point = RandomPoint(random);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.5f))
-                {
-                    continue;
-                }
-
                 float fertility = Mathf.PerlinNoise((point.x - seed) * 0.028f, (point.z + seed) * 0.028f);
                 if (fertility < 0.002f || SlopeAt(point.x, point.z) > 30f)
                 {
@@ -253,11 +233,6 @@ namespace Valendia.Runtime
             for (int i = 0; i < attempts && placed < targetCount; i++)
             {
                 Vector3 point = RandomPoint(random);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 2.5f))
-                {
-                    continue;
-                }
-
                 Biome biome = BiomeAt(point.x, point.z);
                 if (biome != Biome.LavenderField && biome != Biome.GoldenGrass)
                 {
@@ -276,24 +251,22 @@ namespace Valendia.Runtime
             }
         }
 
-        private void ScatterPathEdgeVegetation()
+        private void ScatterForegroundMeadowDetail()
         {
-            Transform parent = CreateContainer("Path Edge Meadow Detail");
+            Transform parent = CreateContainer("Foreground Meadow Detail");
             System.Random random = new System.Random(seed + 606);
             List<Vector3>[] grassVertices = new List<Vector3>[GrassPaletteVariants];
             List<int>[] grassTriangles = new List<int>[GrassPaletteVariants];
             int[] grassBatchIndexes = new int[GrassPaletteVariants];
 
-            for (int i = 0; i < pathEdgePatchCount; i++)
+            for (int i = 0; i < foregroundMeadowDetailCount; i++)
             {
-                float t = Mathf.Lerp(0.08f, 0.92f, i / (float)Mathf.Max(1, pathEdgePatchCount - 1));
-                t += Mathf.Lerp(-0.018f, 0.018f, (float)random.NextDouble());
-                t = Mathf.Clamp01(t);
-
-                float z = Mathf.Lerp(WorldMin.y, -WorldMin.y, t);
-                float side = random.NextDouble() < 0.5 ? -1f : 1f;
-                float distanceFromPath = pathWidth * 0.36f + Mathf.Lerp(1.2f, 6.8f, (float)random.NextDouble());
-                float x = PathCenterX(z) + side * distanceFromPath;
+                float t = Mathf.Sqrt((i + 0.5f) / Mathf.Max(1f, foregroundMeadowDetailCount));
+                float angle = i * 2.39996323f + Mathf.Lerp(-0.42f, 0.42f, (float)random.NextDouble());
+                float x = Mathf.Cos(angle) * t * WorldSize * Mathf.Lerp(0.18f, 0.48f, (float)random.NextDouble());
+                float z = Mathf.Sin(angle) * t * WorldSize * Mathf.Lerp(0.14f, 0.42f, (float)random.NextDouble()) + WorldSize * Mathf.Lerp(-0.08f, 0.16f, (float)random.NextDouble());
+                x = Mathf.Clamp(x + Mathf.Lerp(-18f, 18f, (float)random.NextDouble()), WorldMin.x + 6f, -WorldMin.x - 6f);
+                z = Mathf.Clamp(z + Mathf.Lerp(-18f, 18f, (float)random.NextDouble()), WorldMin.y + 6f, -WorldMin.y - 6f);
 
                 if (SlopeAt(x, z) > 18f)
                 {
@@ -317,7 +290,7 @@ namespace Valendia.Runtime
                         grassVertices[variant],
                         grassTriangles[variant],
                         ref grassBatchIndexes[variant],
-                        $"Path Edge {GrassBatchPrefix(variant)}",
+                        $"Foreground {GrassBatchPrefix(variant)}",
                         GrassMaterialForVariant(variant),
                         grassPoint,
                         random);
@@ -343,7 +316,7 @@ namespace Valendia.Runtime
                     grassVertices[variant],
                     grassTriangles[variant],
                     ref grassBatchIndexes[variant],
-                    $"Path Edge {GrassBatchPrefix(variant)}",
+                    $"Foreground {GrassBatchPrefix(variant)}",
                     GrassMaterialForVariant(variant));
             }
         }
@@ -358,11 +331,6 @@ namespace Valendia.Runtime
             for (int i = 0; i < attempts && placed < scrubCount; i++)
             {
                 Vector3 point = RandomPoint(random);
-                if (IsOnPath(point.x, point.z, pathWidth * 0.5f + pathVegetationClearance))
-                {
-                    continue;
-                }
-
                 if (BiomeAt(point.x, point.z) != Biome.MountainScrub)
                 {
                     continue;
@@ -420,7 +388,7 @@ namespace Valendia.Runtime
                     for (int grass = 0; grass < grassTufts; grass++)
                     {
                         Vector3 point = center + BorderScatterOffset(side, random, sideSpacing * 0.58f, chunkSize * 0.30f);
-                        if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.5f) || SlopeAt(point.x, point.z) > 34f)
+                        if (SlopeAt(point.x, point.z) > 34f)
                         {
                             continue;
                         }

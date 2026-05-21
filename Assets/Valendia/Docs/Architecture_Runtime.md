@@ -10,9 +10,9 @@ La logique de generation est decoupee en fichiers `partial` par responsabilite. 
 
 - `ValendiaLandscapeGenerator.cs` : configuration serialisee, cycle Unity, orchestration de generation, API publique de sampling.
 - `ValendiaLandscapeGenerator.Terrain.cs` : chunks de terrain, foothold terrain, sous-meshs de biomes.
-- `ValendiaLandscapeGenerator.Composition.cs` : chemin, montagnes lointaines, rubans floraux, nuages.
+- `ValendiaLandscapeGenerator.Composition.cs` : montagnes lointaines, rubans floraux organiques, nuages.
 - `ValendiaLandscapeGenerator.Scattering.cs` : distribution proceduralisee des arbres authores Blender, rochers, herbes, fleurs, scrub et vegetation de bordure.
-- `ValendiaLandscapeGenerator.Sampling.cs` : hauteur, pente, chemin, biomes, couleurs de sol et points aleatoires.
+- `ValendiaLandscapeGenerator.Sampling.cs` : hauteur, pente, ligne de vallee invisible, biomes, couleurs de sol et points aleatoires.
 - `ValendiaLandscapeGenerator.Vegetation.cs` : patches de prairie, batches d'herbe et vegetation basse.
 - `ValendiaLandscapeGenerator.Geometry.cs` : rochers, nuages, helpers de rendu et LOD.
 - `ValendiaLandscapeGenerator.Baking.cs` : combinaison des renderers statiques et nettoyage de hierarchie generee.

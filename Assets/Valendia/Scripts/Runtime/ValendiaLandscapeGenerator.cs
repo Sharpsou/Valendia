@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Valendia.Runtime
 {
@@ -26,8 +27,6 @@ namespace Valendia.Runtime
         [SerializeField, Range(0f, 2f)] private float groundNormalStrength = 0.18f;
 
         [Header("Composition")]
-        [SerializeField, Min(2f)] private float pathWidth = 12f;
-        [SerializeField, Min(0f)] private float pathVegetationClearance = 8f;
         [SerializeField, Range(0f, 1f)] private float distantMountainStrength = 0.12f;
         [SerializeField, Range(0f, 0.35f)] private float borderMountainWallStrength = 0.18f;
 
@@ -41,7 +40,8 @@ namespace Valendia.Runtime
         [SerializeField, Range(0.01f, 0.25f)] private float perimeterForestMaxWidthRatio = 0.10f;
         [SerializeField, Min(0)] private int meadowPatchCount = 2400;
         [SerializeField, Min(0)] private int flowerRibbonCount = 32;
-        [SerializeField, Min(0)] private int pathEdgePatchCount = 2400;
+        [FormerlySerializedAs("pathEdgePatchCount")]
+        [SerializeField, Min(0)] private int foregroundMeadowDetailCount = 2400;
         [SerializeField, Min(0)] private int grassTuftCount = 360000;
         [SerializeField, Min(0)] private int rockCount = 260;
         [SerializeField, Min(0)] private int flowerPatchCount = 680;
@@ -64,7 +64,6 @@ namespace Valendia.Runtime
         [SerializeField] private Material goldenGrassGroundMaterial;
         [SerializeField] private Material lavenderGroundMaterial;
         [SerializeField] private Material scrubGroundMaterial;
-        [SerializeField] private Material pathMaterial;
         [SerializeField] private Material meadowMaterial;
         [SerializeField] private Material goldenMeadowMaterial;
         [SerializeField] private Material lavenderMeadowMaterial;
@@ -213,7 +212,6 @@ namespace Valendia.Runtime
             BeginMeadowBatches();
             GenerateTerrainChunks();
             GenerateOuterMountainFootholdTerrain();
-            GenerateSmoothPathRibbon();
             ScatterMeadowPatches();
             GenerateDistantSpires();
             ScatterRocks();
@@ -222,7 +220,7 @@ namespace Valendia.Runtime
             GenerateFlowerRibbons();
             ScatterGrass();
             ScatterFlowerPatches();
-            ScatterPathEdgeVegetation();
+            ScatterForegroundMeadowDetail();
             FlushAllMeadowBatches();
             ScatterMountainScrub();
             ScatterBorderVegetation();
@@ -289,11 +287,11 @@ namespace Valendia.Runtime
             }
         }
 
-        public Vector3 GetPathPoint(float normalizedZ, float heightOffset = 0f)
+        public Vector3 GetScenicPoint(float normalizedZ, float heightOffset = 0f)
         {
             normalizedZ = Mathf.Clamp01(normalizedZ);
             float z = Mathf.Lerp(WorldMin.y, -WorldMin.y, normalizedZ);
-            float x = PathCenterX(z);
+            float x = ValleyFlowCenterX(z);
             return new Vector3(x, HeightAt(x, z) + heightOffset, z);
         }
 

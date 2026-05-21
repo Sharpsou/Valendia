@@ -6,62 +6,6 @@ namespace Valendia.Runtime
 {
     public sealed partial class ValendiaLandscapeGenerator
     {
-        private void GenerateSmoothPathRibbon()
-        {
-            Transform parent = CreateContainer("Smooth Path Ribbon");
-            int segments = Mathf.Max(24, chunksPerAxis * 42);
-            float halfWidth = pathWidth * 0.42f;
-            Vector3[] vertices = new Vector3[(segments + 1) * 2];
-            Vector2[] uv = new Vector2[vertices.Length];
-            int[] triangles = new int[segments * 6];
-
-            for (int i = 0; i <= segments; i++)
-            {
-                float t = i / (float)segments;
-                float z = Mathf.Lerp(WorldMin.y, -WorldMin.y, t);
-                float x = PathCenterX(z);
-                float aheadZ = Mathf.Lerp(WorldMin.y, -WorldMin.y, Mathf.Clamp01(t + 1f / segments));
-                float behindZ = Mathf.Lerp(WorldMin.y, -WorldMin.y, Mathf.Clamp01(t - 1f / segments));
-                Vector3 tangent = new Vector3(PathCenterX(aheadZ) - PathCenterX(behindZ), 0f, aheadZ - behindZ).normalized;
-                Vector3 normal = new Vector3(-tangent.z, 0f, tangent.x);
-                float widthNoise = Mathf.Lerp(0.86f, 1.15f, Mathf.PerlinNoise(seed * 0.021f, t * 8.3f));
-                Vector3 left = new Vector3(x, 0f, z) - normal * halfWidth * widthNoise;
-                Vector3 right = new Vector3(x, 0f, z) + normal * halfWidth * widthNoise;
-                left.y = HeightAt(left.x, left.z) + 0.08f;
-                right.y = HeightAt(right.x, right.z) + 0.08f;
-
-                int v = i * 2;
-                vertices[v] = left;
-                vertices[v + 1] = right;
-                uv[v] = new Vector2(0f, t);
-                uv[v + 1] = new Vector2(1f, t);
-            }
-
-            for (int i = 0; i < segments; i++)
-            {
-                int v = i * 2;
-                int tri = i * 6;
-                triangles[tri] = v;
-                triangles[tri + 1] = v + 1;
-                triangles[tri + 2] = v + 2;
-                triangles[tri + 3] = v + 1;
-                triangles[tri + 4] = v + 3;
-                triangles[tri + 5] = v + 2;
-            }
-
-            Mesh mesh = new Mesh { name = "Smooth Valendia path ribbon" };
-            mesh.vertices = vertices;
-            mesh.uv = uv;
-            mesh.triangles = triangles;
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-
-            GameObject ribbon = CreateMeshObject("Smooth Dust Path", mesh, pathMaterial, parent);
-            MeshRenderer renderer = ribbon.GetComponent<MeshRenderer>();
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = true;
-        }
-
         private void GenerateDistantSpires()
         {
             Transform parent = CreateContainer("Encircling Limestone Mountains");
@@ -135,7 +79,8 @@ namespace Valendia.Runtime
                 float t = Mathf.Lerp(0.12f, 0.88f, (ribbon + 0.5f) / Mathf.Max(1f, flowerRibbonCount));
                 float z = Mathf.Lerp(WorldMin.y, -WorldMin.y, t);
                 float side = random.NextDouble() < 0.5 ? -1f : 1f;
-                float x = PathCenterX(z) + side * Mathf.Lerp(12f, 42f, (float)random.NextDouble());
+                float flowNoise = Mathf.PerlinNoise(seed * 0.017f + ribbon * 0.19f, t * 4.7f);
+                float x = ValleyFlowCenterX(z) + side * Mathf.Lerp(24f, 74f, flowNoise);
                 Biome biome = random.NextDouble() < 0.82 ? Biome.LavenderField : Biome.GoldenGrass;
 
                 int strokes = random.Next(12, 22);
@@ -147,7 +92,7 @@ namespace Valendia.Runtime
                         z + Mathf.Lerp(-28f, 28f, (float)random.NextDouble()));
                     point.y = HeightAt(point.x, point.z);
 
-                    if (IsOnPath(point.x, point.z, pathWidth * 0.5f + 1.5f) || SlopeAt(point.x, point.z) > 18f)
+                    if (SlopeAt(point.x, point.z) > 18f)
                     {
                         continue;
                     }

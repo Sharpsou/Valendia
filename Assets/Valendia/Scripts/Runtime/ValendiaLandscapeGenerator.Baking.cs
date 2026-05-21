@@ -68,8 +68,7 @@ namespace Valendia.Runtime
             }
 
             string name = gameObject.name;
-            return !name.Contains("Smooth Dust Path")
-                && !name.StartsWith("Terrain Chunk", StringComparison.Ordinal);
+            return !name.StartsWith("Terrain Chunk", StringComparison.Ordinal);
         }
 
         private void BakeRendererGroup(Transform bakeRoot, StaticBakeKey key, List<MeshRenderer> renderers)
