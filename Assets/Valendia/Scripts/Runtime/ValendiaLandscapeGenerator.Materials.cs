@@ -117,8 +117,8 @@ namespace Valendia.Runtime
             sun.transform.rotation = Quaternion.Euler(24f, -42f, 0f);
             RenderSettings.sun = sun;
             QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowDistance = 900f;
-            QualitySettings.shadowCascades = 4;
+            QualitySettings.shadowDistance = OptimizedShadowDistance;
+            QualitySettings.shadowCascades = OptimizedShadowCascades;
 
             DynamicGI.UpdateEnvironment();
         }

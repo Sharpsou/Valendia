@@ -62,7 +62,9 @@ namespace Valendia.Runtime
             }
 
             GameObject gameObject = renderer.gameObject;
-            if (gameObject.GetComponent<MeshCollider>() != null || gameObject.GetComponentInParent<LODGroup>() != null)
+            if (gameObject.GetComponent<MeshCollider>() != null
+                || gameObject.GetComponentInParent<LODGroup>() != null
+                || gameObject.GetComponentInParent<ValendiaTreeHlodCell>() != null)
             {
                 return false;
             }

@@ -291,14 +291,16 @@ namespace Valendia.Runtime
             stemMesh.SetTriangles(stemTriangles, 0);
             stemMesh.RecalculateNormals();
             stemMesh.RecalculateBounds();
-            ConfigureGrassRenderer(CreateMeshObject("Lavender Stems", stemMesh, grassMaterial, patch.transform).GetComponent<MeshRenderer>());
+            GameObject stemObject = CreateMeshObject("Lavender Stems", stemMesh, grassMaterial, patch.transform);
+            ConfigureGrassRenderer(stemObject.GetComponent<MeshRenderer>());
 
             Mesh blossomMesh = new Mesh { name = "Lavender blossoms mesh" };
             blossomMesh.SetVertices(blossomVertices);
             blossomMesh.SetTriangles(blossomTriangles, 0);
             blossomMesh.RecalculateNormals();
             blossomMesh.RecalculateBounds();
-            ConfigureSoftVegetation(CreateMeshObject("Lavender Blossoms", blossomMesh, flowerMaterial, patch.transform).GetComponent<MeshRenderer>());
+            GameObject blossoms = CreateMeshObject("Lavender Blossoms", blossomMesh, flowerMaterial, patch.transform);
+            ConfigureSoftVegetation(blossoms.GetComponent<MeshRenderer>());
         }
 
         private void CreateScrub(Transform parent, Vector3 position, System.Random random)

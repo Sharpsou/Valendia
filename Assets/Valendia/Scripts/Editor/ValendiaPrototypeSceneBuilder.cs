@@ -20,11 +20,27 @@ namespace Valendia.Editor
         private const string GroundNormalTexturePath = GroundTextureFolder + "/Valendia Organic Ground Normal.asset";
         private static readonly string[] AuthoredTreePrefabPaths =
         {
-            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_broad_01.fbx",
-            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_tall_01.fbx",
-            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_core_01.fbx",
-            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_low_01.fbx",
-            "Assets/Valendia/Art/Environment/Trees/Exports/FBX/tree_reference_oak_slim_01.fbx"
+            "Assets/Valendia/Art/Environment/Trees/FullFBX/tree_reference_oak_broad_01_full.fbx",
+            "Assets/Valendia/Art/Environment/Trees/FullFBX/tree_reference_oak_tall_01_full.fbx",
+            "Assets/Valendia/Art/Environment/Trees/FullFBX/tree_reference_oak_core_01_full.fbx",
+            "Assets/Valendia/Art/Environment/Trees/FullFBX/tree_reference_oak_low_01_full.fbx",
+            "Assets/Valendia/Art/Environment/Trees/FullFBX/tree_reference_oak_slim_01_full.fbx"
+        };
+        private static readonly string[] AuthoredTreeMidPrefabPaths =
+        {
+            "Assets/Valendia/Art/Environment/Trees/OptimizedFBX/tree_reference_oak_broad_01_optimized.fbx",
+            "Assets/Valendia/Art/Environment/Trees/OptimizedFBX/tree_reference_oak_tall_01_optimized.fbx",
+            "Assets/Valendia/Art/Environment/Trees/OptimizedFBX/tree_reference_oak_core_01_optimized.fbx",
+            "Assets/Valendia/Art/Environment/Trees/OptimizedFBX/tree_reference_oak_low_01_optimized.fbx",
+            "Assets/Valendia/Art/Environment/Trees/OptimizedFBX/tree_reference_oak_slim_01_optimized.fbx"
+        };
+        private static readonly string[] AuthoredTreeHlodPrefabPaths =
+        {
+            "Assets/Valendia/Art/Environment/Trees/HlodFBX/tree_reference_oak_broad_01_hlod.fbx",
+            "Assets/Valendia/Art/Environment/Trees/HlodFBX/tree_reference_oak_tall_01_hlod.fbx",
+            "Assets/Valendia/Art/Environment/Trees/HlodFBX/tree_reference_oak_core_01_hlod.fbx",
+            "Assets/Valendia/Art/Environment/Trees/HlodFBX/tree_reference_oak_low_01_hlod.fbx",
+            "Assets/Valendia/Art/Environment/Trees/HlodFBX/tree_reference_oak_slim_01_hlod.fbx"
         };
 
         [MenuItem("Valendia/Create Prototype Scene")]
@@ -235,6 +251,11 @@ namespace Valendia.Editor
 
         private static ValendiaLandscapeGenerator CreateBootstrapSceneAsset()
         {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(BootstrapScenePath) != null)
+            {
+                AssetDatabase.DeleteAsset(BootstrapScenePath);
+            }
+
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             ValendiaLandscapeGenerator generator = CreateBootstrapWorld();
@@ -319,7 +340,11 @@ namespace Valendia.Editor
         {
             SerializedObject serializedGenerator = new SerializedObject(generator);
             SerializedProperty prefabs = serializedGenerator.FindProperty("authoredTreePrefabs");
+            SerializedProperty midPrefabs = serializedGenerator.FindProperty("authoredTreeMidPrefabs");
+            SerializedProperty hlodPrefabs = serializedGenerator.FindProperty("authoredTreeHlodPrefabs");
             prefabs.arraySize = AuthoredTreePrefabPaths.Length;
+            midPrefabs.arraySize = AuthoredTreeMidPrefabPaths.Length;
+            hlodPrefabs.arraySize = AuthoredTreeHlodPrefabPaths.Length;
 
             for (int i = 0; i < AuthoredTreePrefabPaths.Length; i++)
             {
@@ -330,6 +355,28 @@ namespace Valendia.Editor
                 }
 
                 prefabs.GetArrayElementAtIndex(i).objectReferenceValue = prefab;
+            }
+
+            for (int i = 0; i < AuthoredTreeMidPrefabPaths.Length; i++)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AuthoredTreeMidPrefabPaths[i]);
+                if (prefab == null)
+                {
+                    throw new System.InvalidOperationException($"Missing authored tree mid prefab: {AuthoredTreeMidPrefabPaths[i]}");
+                }
+
+                midPrefabs.GetArrayElementAtIndex(i).objectReferenceValue = prefab;
+            }
+
+            for (int i = 0; i < AuthoredTreeHlodPrefabPaths.Length; i++)
+            {
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(AuthoredTreeHlodPrefabPaths[i]);
+                if (prefab == null)
+                {
+                    throw new System.InvalidOperationException($"Missing authored tree HLOD prefab: {AuthoredTreeHlodPrefabPaths[i]}");
+                }
+
+                hlodPrefabs.GetArrayElementAtIndex(i).objectReferenceValue = prefab;
             }
 
             serializedGenerator.FindProperty("generateAuthoredTreePrefabs").boolValue = true;
@@ -527,8 +574,8 @@ namespace Valendia.Editor
             sun.transform.rotation = Quaternion.Euler(24f, -42f, 0f);
             RenderSettings.sun = light;
             QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowDistance = 900f;
-            QualitySettings.shadowCascades = 4;
+            QualitySettings.shadowDistance = 180f;
+            QualitySettings.shadowCascades = 2;
         }
 
         private static void CreatePlayer(ValendiaLandscapeGenerator generator)

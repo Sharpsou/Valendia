@@ -13,7 +13,7 @@ namespace Valendia.Runtime
                 return;
             }
 
-            Transform parent = CreateContainer("Authored Blender Trees");
+            Transform parent = treeHlodCells == null ? CreateContainer("Authored Blender Trees") : null;
             System.Random random = new System.Random(seed + 1917);
             int placed = 0;
             int attempts = authoredTreePrefabCount * 10;
@@ -28,7 +28,8 @@ namespace Valendia.Runtime
                     continue;
                 }
 
-                GameObject prefab = authoredTreePrefabs[random.Next(authoredTreePrefabs.Length)];
+                int prefabIndex = random.Next(authoredTreePrefabs.Length);
+                GameObject prefab = authoredTreePrefabs[prefabIndex];
                 if (prefab == null)
                 {
                     continue;
@@ -36,7 +37,17 @@ namespace Valendia.Runtime
 
                 point.y = HeightAt(point.x, point.z);
                 float scale = Mathf.Lerp(1.37f, 2.16f, (float)random.NextDouble());
-                InstantiateAuthoredTree(prefab, parent, point, (float)random.NextDouble() * 360f, scale);
+                float yaw = (float)random.NextDouble() * 360f;
+                if (treeHlodCells != null)
+                {
+                    CreateAuthoredTreeCollider(TreeParentForPoint(point), prefab.name, point, yaw, scale);
+                    RegisterTreeHlodInstance(prefab, MidPrefabForIndex(prefabIndex, prefab), HlodPrefabForIndex(prefabIndex, prefab), point, yaw, scale);
+                }
+                else
+                {
+                    InstantiateAuthoredTree(prefab, parent, point, yaw, scale);
+                }
+
                 placed++;
             }
 
@@ -53,7 +64,7 @@ namespace Valendia.Runtime
                 return;
             }
 
-            Transform parent = CreateContainer("Perimeter Forest Ring");
+            Transform parent = treeHlodCells == null ? CreateContainer("Perimeter Forest Ring") : null;
             System.Random random = new System.Random(seed + 2419);
             float halfWorld = WorldSize * 0.5f;
             float minInset = WorldSize * Mathf.Min(perimeterForestMinWidthRatio, perimeterForestMaxWidthRatio);
@@ -71,7 +82,8 @@ namespace Valendia.Runtime
                     continue;
                 }
 
-                GameObject prefab = authoredTreePrefabs[random.Next(authoredTreePrefabs.Length)];
+                int prefabIndex = random.Next(authoredTreePrefabs.Length);
+                GameObject prefab = authoredTreePrefabs[prefabIndex];
                 if (prefab == null)
                 {
                     continue;
@@ -81,7 +93,17 @@ namespace Valendia.Runtime
                 float edgeDistance = Mathf.Min(halfWorld - Mathf.Abs(point.x), halfWorld - Mathf.Abs(point.z));
                 float depth = Mathf.InverseLerp(maxInset, minInset, edgeDistance);
                 float scale = Mathf.Lerp(1.46f, 2.34f, (float)random.NextDouble()) * Mathf.Lerp(0.92f, 1.12f, depth);
-                InstantiateAuthoredTree(prefab, parent, point, (float)random.NextDouble() * 360f, scale);
+                float yaw = (float)random.NextDouble() * 360f;
+                if (treeHlodCells != null)
+                {
+                    CreateAuthoredTreeCollider(TreeParentForPoint(point), prefab.name, point, yaw, scale);
+                    RegisterTreeHlodInstance(prefab, MidPrefabForIndex(prefabIndex, prefab), HlodPrefabForIndex(prefabIndex, prefab), point, yaw, scale);
+                }
+                else
+                {
+                    InstantiateAuthoredTree(prefab, parent, point, yaw, scale);
+                }
+
                 placed++;
             }
 
@@ -119,6 +141,46 @@ namespace Valendia.Runtime
             tree.isStatic = true;
             ConfigureAuthoredTreeInstance(tree);
             return tree;
+        }
+
+        private GameObject HlodPrefabForIndex(int index, GameObject fallback)
+        {
+            if (authoredTreeHlodPrefabs != null
+                && index >= 0
+                && index < authoredTreeHlodPrefabs.Length
+                && authoredTreeHlodPrefabs[index] != null)
+            {
+                return authoredTreeHlodPrefabs[index];
+            }
+
+            return fallback;
+        }
+
+        private GameObject MidPrefabForIndex(int index, GameObject fallback)
+        {
+            if (authoredTreeMidPrefabs != null
+                && index >= 0
+                && index < authoredTreeMidPrefabs.Length
+                && authoredTreeMidPrefabs[index] != null)
+            {
+                return authoredTreeMidPrefabs[index];
+            }
+
+            return fallback;
+        }
+
+        private static void CreateAuthoredTreeCollider(Transform parent, string treeName, Vector3 point, float yawDegrees, float scale)
+        {
+            GameObject tree = new GameObject($"{treeName} Collider");
+            tree.transform.SetParent(parent, false);
+            tree.transform.SetPositionAndRotation(point, Quaternion.Euler(0f, yawDegrees, 0f));
+            tree.transform.localScale = Vector3.one * scale;
+            tree.isStatic = true;
+
+            CapsuleCollider collider = tree.AddComponent<CapsuleCollider>();
+            collider.center = new Vector3(0f, 1.15f, 0f);
+            collider.radius = 0.32f;
+            collider.height = 2.3f;
         }
 
         private static void ConfigureAuthoredTreeInstance(GameObject tree)
